@@ -3964,6 +3964,11 @@ void Parser::ParseDeclarationSpecifiers(
                                  getLangOpts());
       break;
 
+    case tok::kw___callsite_wrapper: {
+      isInvalid = DS.setFunctionSpecCallsiteWrapper(Loc, PrevSpec, DiagID);
+      break;
+    }
+
     case tok::kw___sptr:
     case tok::kw___uptr:
     case tok::kw___ptr64:

@@ -477,7 +477,8 @@ unsigned DeclSpec::getParsedSpecifiers() const {
     Res |= PQ_TypeSpecifier;
 
   if (FS_inline_specified || FS_virtual_specified || hasExplicitSpecifier() ||
-      FS_noreturn_specified || FS_forceinline_specified)
+      FS_noreturn_specified || FS_forceinline_specified ||
+      FS_callsite_wrapper_specified)
     Res |= PQ_FunctionSpecifier;
   return Res;
 }
@@ -1076,6 +1077,21 @@ bool DeclSpec::setFunctionSpecNoreturn(SourceLocation Loc,
   }
   FS_noreturn_specified = true;
   FS_noreturnLoc = Loc;
+  return false;
+}
+
+bool DeclSpec::setFunctionSpecCallsiteWrapper(SourceLocation Loc,
+                                              const char *&PrevSpec,
+                                              unsigned &DiagID) {
+  // '_Noreturn _Noreturn' is ok, but warn as this is likely not what the user
+  // intended.
+  if (FS_callsite_wrapper_specified) {
+    DiagID = diag::warn_duplicate_declspec;
+    PrevSpec = "__callsite_wrapper";
+    return true;
+  }
+  FS_callsite_wrapper_specified = true;
+  FS_callsite_wrapperLoc = Loc;
   return false;
 }
 

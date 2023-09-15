@@ -655,6 +655,9 @@ KEYWORD(__covariant                  , KEYOBJC)
 KEYWORD(__contravariant              , KEYOBJC)
 KEYWORD(__kindof                     , KEYOBJC)
 
+// Callsite wrapper feature keywords.
+KEYWORD(__callsite_wrapper           , KEYALL)
+
 // Alternate spelling for various tokens.  There are GCC extensions in all
 // languages, but should not be disabled in strict conformance mode.
 ALIAS("__alignof__"  , __alignof  , KEYALL)

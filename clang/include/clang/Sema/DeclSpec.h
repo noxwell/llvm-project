@@ -376,6 +376,7 @@ private:
   unsigned FS_forceinline_specified: 1;
   unsigned FS_virtual_specified : 1;
   unsigned FS_noreturn_specified : 1;
+  unsigned FS_callsite_wrapper_specified : 1;
 
   // friend-specifier
   unsigned Friend_specified : 1;
@@ -415,6 +416,7 @@ private:
   SourceLocation TQ_constLoc, TQ_restrictLoc, TQ_volatileLoc, TQ_atomicLoc,
       TQ_unalignedLoc;
   SourceLocation FS_inlineLoc, FS_virtualLoc, FS_explicitLoc, FS_noreturnLoc;
+  SourceLocation FS_callsite_wrapperLoc;
   SourceLocation FS_explicitCloseParenLoc;
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
@@ -466,7 +468,8 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), Friend_specified(false),
+        FS_noreturn_specified(false), FS_callsite_wrapper_specified(false),
+        Friend_specified(false),
         ConstexprSpecifier(
             static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
@@ -627,6 +630,13 @@ public:
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
 
+  bool isCallsiteWrapperSpecified() const {
+    return FS_callsite_wrapper_specified;
+  }
+  SourceLocation getCallsiteWrapperSpecLoc() const {
+    return FS_callsite_wrapperLoc;
+  }
+
   void ClearFunctionSpecs() {
     FS_inline_specified = false;
     FS_inlineLoc = SourceLocation();
@@ -639,6 +649,8 @@ public:
     FS_explicitCloseParenLoc = SourceLocation();
     FS_noreturn_specified = false;
     FS_noreturnLoc = SourceLocation();
+    FS_callsite_wrapper_specified = false;
+    FS_callsite_wrapperLoc = SourceLocation();
   }
 
   /// This method calls the passed in handler on each CVRU qual being
@@ -773,6 +785,8 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
+  bool setFunctionSpecCallsiteWrapper(SourceLocation Loc, const char *&PrevSpec,
+                                  unsigned &DiagID);
 
   bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                      unsigned &DiagID);

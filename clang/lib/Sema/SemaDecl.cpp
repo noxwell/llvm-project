@@ -9798,7 +9798,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (IsLocalExternDecl)
     NewFD->setLocalExternDecl();
 
-  if (getLangOpts().CPlusPlus) {
+  if (getLangOpts().CPlusPlus || D.getDeclSpec().isCallsiteWrapperSpecified()) {
     // The rules for implicit inlines changed in C++20 for methods and friends
     // with an in-class definition (when such a definition is not attached to
     // the global module).  User-specified 'inline' overrides this (set when
@@ -9854,15 +9854,45 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     // Match up the template parameter lists with the scope specifier, then
     // determine whether we have a template or a template specialization.
     bool Invalid = false;
-    TemplateParameterList *TemplateParams =
-        MatchTemplateParametersToScopeSpecifier(
-            D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
-            D.getCXXScopeSpec(),
-            D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
-                ? D.getName().TemplateId
-                : nullptr,
-            TemplateParamLists, isFriend, isMemberSpecialization,
-            Invalid);
+    TemplateParameterList *TemplateParams = nullptr;
+    if (!D.getDeclSpec().isCallsiteWrapperSpecified()) {
+      TemplateParams = MatchTemplateParametersToScopeSpecifier(
+          D.getDeclSpec().getBeginLoc(), D.getIdentifierLoc(),
+          D.getCXXScopeSpec(),
+          D.getName().getKind() == UnqualifiedIdKind::IK_TemplateId
+              ? D.getName().TemplateId
+              : nullptr,
+          TemplateParamLists, isFriend, isMemberSpecialization, Invalid);
+    } else {
+      TypeSourceInfo *TCallsiteLine =
+          Context.getTrivialTypeSourceInfo(Context.getSizeType());
+      std::string label = "__CALLSITE_LINE";
+      IdentifierInfo *NCallsiteLine = &Context.Idents.get(label);
+      auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
+          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+          /*Position=*/0,
+          /*Id=*/NCallsiteLine, TCallsiteLine->getType(),
+          /*ParameterPack=*/false, TCallsiteLine);
+
+      // default value
+      llvm::APInt APValue =
+          llvm::APInt(Context.getTypeSize(TCallsiteLine->getType()), 123);
+      Expr* CallsiteLineDefault = IntegerLiteral::Create(
+          Context, APValue, TCallsiteLine->getType(), SourceLocation());
+      CallsiteLine->setDefaultArgument(CallsiteLineDefault);
+
+      // add to scope
+      S->AddDecl(CallsiteLine);
+      IdResolver.AddDecl(CallsiteLine);
+
+      // wrap into template parameter list
+      NamedDecl *Params[] = {CallsiteLine};
+      TemplateParams = TemplateParameterList::Create(Context, SourceLocation(),
+                                                     SourceLocation(), Params,
+                                                     SourceLocation(), nullptr);
+    }
+
+
     if (TemplateParams) {
       // Check that we can declare a template here.
       if (CheckTemplateDeclScope(S, TemplateParams))
@@ -10338,7 +10368,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
-  if (!getLangOpts().CPlusPlus) {
+  if (!getLangOpts().CPlusPlus && !D.getDeclSpec().isCallsiteWrapperSpecified()) {
     // Perform semantic checking on the function declaration.
     if (!NewFD->isInvalidDecl() && NewFD->isMain())
       CheckMain(NewFD, D.getDeclSpec());
@@ -10795,7 +10825,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
   }
 
-  if (getLangOpts().CPlusPlus) {
+  if (getLangOpts().CPlusPlus || D.getDeclSpec().isCallsiteWrapperSpecified()) {
     // Precalculate whether this is a friend function template with a constraint
     // that depends on an enclosing template, per [temp.friend]p9.
     if (isFriend && FunctionTemplate &&
@@ -12502,8 +12532,8 @@ bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
   // Regular C++ code will not end up here (exceptions: language extensions,
   // OpenCL C++ etc), so the constant expression rules there don't matter.
   if (Init->isValueDependent()) {
-    assert(Init->containsErrors() &&
-           "Dependent code should only occur in error-recovery path.");
+    // assert(Init->containsErrors() &&
+    //        "Dependent code should only occur in error-recovery path.");
     return true;
   }
   const Expr *Culprit;

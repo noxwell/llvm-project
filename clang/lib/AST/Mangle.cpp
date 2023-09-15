@@ -120,6 +120,13 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
       isUniqueInternalLinkageDecl(D))
     return true;
 
+  // Template instantiations should always be mangled.
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    if (FD->getTemplatedKind() != FunctionDecl::TK_NonTemplate) {
+      return true;
+    }
+  }
+
   // In C, functions with no attributes never need to be mangled. Fastpath them.
   if (!getASTContext().getLangOpts().CPlusPlus && !D->hasAttrs())
     return false;
