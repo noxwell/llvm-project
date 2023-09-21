@@ -9866,28 +9866,34 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     } else {
       TypeSourceInfo *TCallsiteLine =
           Context.getTrivialTypeSourceInfo(Context.getSizeType());
-      std::string label = "__CALLSITE_LINE";
-      IdentifierInfo *NCallsiteLine = &Context.Idents.get(label);
+      IdentifierInfo *NCallsiteLine = &Context.Idents.get("__CALLSITE_LINE");
       auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
           /*Position=*/0,
           /*Id=*/NCallsiteLine, TCallsiteLine->getType(),
           /*ParameterPack=*/false, TCallsiteLine);
 
-      // default value
-      // llvm::APInt APValue =
-      //     llvm::APInt(Context.getTypeSize(TCallsiteLine->getType()), 123);
-      // Expr* CallsiteLineDefault = IntegerLiteral::Create(
-      //     Context, APValue, TCallsiteLine->getType(), SourceLocation());
-      // CallsiteLine->setDefaultArgument(CallsiteLineDefault);
       CallsiteLine->setCallsiteParameterKind(CallsiteTemplateParmKind::Line);
-
       // add to scope
       S->AddDecl(CallsiteLine);
       IdResolver.AddDecl(CallsiteLine);
 
+      TypeSourceInfo *TCallsiteFile = Context.getTrivialTypeSourceInfo(
+          Context.getIncompleteArrayType(Context.CharTy, ArrayType::Star, 0));
+      IdentifierInfo *NCallsiteFile = &Context.Idents.get("__CALLSITE_FILE");
+      auto *CallsiteFile = NonTypeTemplateParmDecl::Create(
+          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+          /*Position=*/1,
+          /*Id=*/NCallsiteFile, TCallsiteFile->getType(),
+          /*ParameterPack=*/false, TCallsiteFile);
+
+      CallsiteFile->setCallsiteParameterKind(CallsiteTemplateParmKind::File);
+      // add to scope
+      S->AddDecl(CallsiteFile);
+      IdResolver.AddDecl(CallsiteFile);
+
       // wrap into template parameter list
-      NamedDecl *Params[] = {CallsiteLine};
+      NamedDecl *Params[] = {CallsiteLine, CallsiteFile};
       TemplateParams = TemplateParameterList::Create(Context, SourceLocation(),
                                                      SourceLocation(), Params,
                                                      SourceLocation(), nullptr);

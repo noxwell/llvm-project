@@ -4114,14 +4114,32 @@ static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
   if (PLoc.isInvalid()) {
     return Sema::TDK_Incomplete;
   }
-  QualType T = S.Context.getSizeType();
-  llvm::APSInt Line = S.Context.MakeIntValue(PLoc.getLine(), T);
-  if (auto Result =
-          DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP, Line, T,
-                                        /*ArrayBound=*/false, Info, Deduced)) {
-    return Result;
+  switch (NTTP->callsiteParameterKind()) {
+  case CallsiteTemplateParmKind::Line: {
+    QualType T = S.Context.getSizeType();
+    llvm::APSInt Value = S.Context.MakeIntValue(PLoc.getLine(), T);
+    if (auto Result = DeduceNonTypeTemplateArgument(
+            S, TemplateParams, NTTP, Value, T,
+            /*ArrayBound=*/false, Info, Deduced)) {
+      return Result;
+    }
+    return Sema::TDK_Success;
   }
-  return Sema::TDK_Success;
+  case CallsiteTemplateParmKind::File: {
+    QualType T = S.Context.getPointerType(S.Context.CharTy);
+    StringLiteral *Value =
+        S.Context.getPredefinedStringLiteralFromCache(PLoc.getFilename());
+    if (auto Result = DeduceNonTypeTemplateArgument(
+            S, TemplateParams, NTTP,
+            DeducedTemplateArgument(TemplateArgument(Value, T)), T, Info,
+            Deduced)) {
+      return Result;
+    }
+    return Sema::TDK_Success;
+  }
+  default:
+    return Sema::TDK_Incomplete;
+  }
 }
 
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(

@@ -7211,7 +7211,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // type check in order to force specific types to be more specialized than
     // 'auto'. It's not clear how partial ordering with 'auto' is supposed to
     // work. Similarly for CTAD, when comparing 'A<x>' against 'A'.
-    if ((ParamType->isDependentType() || Arg->isTypeDependent()) &&
+    if ((ParamType->isDependentType() || Arg->isTypeDependent() ||
+         Param->isCallsiteParameter()) &&
         !Arg->getType()->getContainedDeducedType()) {
       SugaredConverted = TemplateArgument(Arg);
       CanonicalConverted = TemplateArgument(
