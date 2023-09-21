@@ -9875,11 +9875,12 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           /*ParameterPack=*/false, TCallsiteLine);
 
       // default value
-      llvm::APInt APValue =
-          llvm::APInt(Context.getTypeSize(TCallsiteLine->getType()), 123);
-      Expr* CallsiteLineDefault = IntegerLiteral::Create(
-          Context, APValue, TCallsiteLine->getType(), SourceLocation());
-      CallsiteLine->setDefaultArgument(CallsiteLineDefault);
+      // llvm::APInt APValue =
+      //     llvm::APInt(Context.getTypeSize(TCallsiteLine->getType()), 123);
+      // Expr* CallsiteLineDefault = IntegerLiteral::Create(
+      //     Context, APValue, TCallsiteLine->getType(), SourceLocation());
+      // CallsiteLine->setDefaultArgument(CallsiteLineDefault);
+      CallsiteLine->setCallsiteParameterKind(CallsiteTemplateParmKind::Line);
 
       // add to scope
       S->AddDecl(CallsiteLine);

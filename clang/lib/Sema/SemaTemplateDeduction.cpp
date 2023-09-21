@@ -3973,6 +3973,9 @@ static bool
 hasDeducibleTemplateParameters(Sema &S, FunctionTemplateDecl *FunctionTemplate,
                                QualType T);
 
+static bool
+hasCallsiteTemplateParameters(TemplateParameterList *TemplateParams);
+
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     Sema &S, TemplateParameterList *TemplateParams, unsigned FirstInnerIndex,
     QualType ParamType, QualType ArgType,
@@ -3982,6 +3985,15 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
     SmallVectorImpl<Sema::OriginalCallArg> &OriginalCallArgs,
     bool DecomposedParam, unsigned ArgIdx, unsigned TDF,
     TemplateSpecCandidateSet *FailedTSC = nullptr);
+
+static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
+    Sema &S, TemplateParameterList *TemplateParams,
+    const NonTypeTemplateParmDecl *NTTP, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced);
+
+static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(
+    Sema &S, TemplateParameterList *TemplateParams, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced);
 
 /// Attempt template argument deduction from an initializer list
 ///        deemed to be an argument in a function call.
@@ -4087,6 +4099,47 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallArgument(
         Sema::OriginalCallArg(OrigParamType, DecomposedParam, ArgIdx, ArgType));
   return DeduceTemplateArgumentsByTypeMatch(S, TemplateParams, ParamType,
                                             ArgType, Info, Deduced, TDF);
+}
+
+static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
+    Sema &S, TemplateParameterList *TemplateParams,
+    const NonTypeTemplateParmDecl *NTTP, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
+  SourceLocation Loc = Info.getLocation();
+  if (Loc.isInvalid()) {
+    return Sema::TDK_Incomplete;
+  }
+  PresumedLoc PLoc = S.Context.getSourceManager().getPresumedLoc(
+      S.Context.getSourceManager().getExpansionRange(Loc).getBegin());
+  if (PLoc.isInvalid()) {
+    return Sema::TDK_Incomplete;
+  }
+  QualType T = S.Context.getSizeType();
+  llvm::APSInt Line = S.Context.MakeIntValue(PLoc.getLine(), T);
+  if (auto Result =
+          DeduceNonTypeTemplateArgument(S, TemplateParams, NTTP, Line, T,
+                                        /*ArrayBound=*/false, Info, Deduced)) {
+    return Result;
+  }
+  return Sema::TDK_Success;
+}
+
+static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(
+    Sema &S, TemplateParameterList *TemplateParams, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
+  for (TemplateParameterList::const_iterator I = TemplateParams->begin(),
+                                             E = TemplateParams->end();
+       I != E; ++I) {
+    if (auto *NTTP = dyn_cast_or_null<NonTypeTemplateParmDecl>(*I)) {
+      if (NTTP->isCallsiteParameter()) {
+        if (auto Result = DeduceCallsiteTemplateArgument(S, TemplateParams,
+                                                         NTTP, Info, Deduced)) {
+          return Result;
+        }
+      }
+    }
+  }
+  return Sema::TDK_Success;
 }
 
 /// Perform template argument deduction from a function call
@@ -4289,6 +4342,14 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
       return Result;
   }
 
+  if (hasCallsiteTemplateParameters(TemplateParams)) {
+    if (TemplateDeductionResult Result
+          = DeduceTemplateArgumentsFromCallsite(*this, TemplateParams, Info,
+                                                Deduced)) {
+      return Result;
+    }
+  }
+
   // Capture the context in which the function call is made. This is the context
   // that is needed when the accessibility of template arguments is checked.
   DeclContext *CallingCtx = CurContext;
@@ -4432,6 +4493,14 @@ Sema::TemplateDeductionResult Sema::DeduceTemplateArguments(
                                                FunctionType, ArgFunctionType,
                                                Info, Deduced, TDF))
       return Result;
+  }
+
+  if (hasCallsiteTemplateParameters(TemplateParams)) {
+    if (TemplateDeductionResult Result
+          = DeduceTemplateArgumentsFromCallsite(*this, TemplateParams, Info,
+                                                Deduced)) {
+      return Result;
+    }
   }
 
   TemplateDeductionResult Result;
@@ -6478,4 +6547,18 @@ bool hasDeducibleTemplateParameters(Sema &S,
                                Deduced);
 
   return Deduced.any();
+}
+
+bool hasCallsiteTemplateParameters(TemplateParameterList *TemplateParams) {
+  for (TemplateParameterList::const_iterator I = TemplateParams->begin(),
+                                             E = TemplateParams->end();
+       I != E; ++I) {
+    if (auto *NTTP = dyn_cast_or_null<NonTypeTemplateParmDecl>(*I)) {
+      if (NTTP->isCallsiteParameter()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }

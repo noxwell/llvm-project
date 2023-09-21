@@ -1365,6 +1365,14 @@ public:
   static bool classofKind(Kind K) { return K == TemplateTypeParm; }
 };
 
+/// Kinds of callsite template parameter.
+enum class CallsiteTemplateParmKind {
+  None,
+  Line,
+  Function,
+  File,
+};
+
 /// NonTypeTemplateParmDecl - Declares a non-type template parameter,
 /// e.g., "Size" in
 /// @code
@@ -1397,6 +1405,9 @@ class NonTypeTemplateParmDecl final
 
   /// The number of types in an expanded parameter pack.
   unsigned NumExpandedTypes = 0;
+
+  CallsiteTemplateParmKind CallsiteParameterKind =
+      CallsiteTemplateParmKind::None;
 
   size_t numTrailingObjects(
       OverloadToken<std::pair<QualType, TypeSourceInfo *>>) const {
@@ -1573,6 +1584,16 @@ public:
   void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
     if (Expr *E = getPlaceholderTypeConstraint())
       AC.push_back(E);
+  }
+
+  bool isCallsiteParameter() const {
+    return CallsiteParameterKind != CallsiteTemplateParmKind::None;
+  }
+  CallsiteTemplateParmKind callsiteParameterKind() const {
+    return CallsiteParameterKind;
+  }
+  void setCallsiteParameterKind(CallsiteTemplateParmKind kind) {
+    CallsiteParameterKind = kind;
   }
 
   // Implement isa/cast/dyncast/etc.
