@@ -9866,7 +9866,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     } else {
       TypeSourceInfo *TCallsiteLine =
           Context.getTrivialTypeSourceInfo(Context.getSizeType());
-      IdentifierInfo *NCallsiteLine = &Context.Idents.get("__CALLSITE_LINE");
+      IdentifierInfo *NCallsiteLine = &Context.Idents.get("__callsite_LINE");
       auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
           /*Position=*/0,
@@ -9880,7 +9880,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
       TypeSourceInfo *TCallsiteFile = Context.getTrivialTypeSourceInfo(
           Context.getIncompleteArrayType(Context.CharTy, ArrayType::Star, 0));
-      IdentifierInfo *NCallsiteFile = &Context.Idents.get("__CALLSITE_FILE");
+      IdentifierInfo *NCallsiteFile = &Context.Idents.get("__callsite_FILE");
       auto *CallsiteFile = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
           /*Position=*/1,
