@@ -4338,6 +4338,11 @@ def err_attribute_builtin_alias : Error<
 def err_called_once_attribute_wrong_type : Error<
   "'called_once' attribute only applies to function-like parameters">;
 
+// callsite wrapper diagnostrics.
+def err_callsite_wrapped_by_arg_not_wrapper : Error<
+  "%0 attribute can only be applied to a function annotated with"
+  "'__callsite_wrapper'.">;
+
 def warn_completion_handler_never_called : Warning<
   "%select{|captured }1completion handler is never called">,
   InGroup<CompletionHandler>, DefaultIgnore;

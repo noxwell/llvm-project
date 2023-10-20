@@ -5001,6 +5001,17 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D,
   return ::new (Context) OptimizeNoneAttr(Context, CI);
 }
 
+CallsiteWrappedByAttr *Sema::mergeCallsiteWrappedByAttr(
+    Decl *D, const AttributeCommonInfo &CI, FunctionTemplateDecl *FTD) {
+  if (CallsiteWrappedByAttr *Attr = D->getAttr<CallsiteWrappedByAttr>()) {
+    Diag(Attr->getLocation(), diag::warn_attribute_ignored) << Attr;
+    Diag(CI.getLoc(), diag::note_conflicting_attribute);
+    D->dropAttr<CallsiteWrappedByAttr>();
+  }
+
+  return ::new (Context) CallsiteWrappedByAttr(Context, CI, FTD);
+}
+
 static void handleAlwaysInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (AlwaysInlineAttr *Inline =
           S.mergeAlwaysInlineAttr(D, AL, AL.getAttrName()))
@@ -8381,6 +8392,34 @@ static void handleCountedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(CBA);
 }
 
+static void handleCallsiteWrappedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  Expr *E = AL.getArgAsExpr(0);
+  SourceLocation Loc = E->getExprLoc();
+  UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E);
+  FunctionTemplateDecl *FTD = nullptr;
+
+  if (!ULE) {
+    S.Diag(Loc, diag::err_callsite_wrapped_by_arg_not_wrapper) << AL;
+    return;
+  }
+
+  if (ULE->getNumDecls() == 1) {
+    UnresolvedSetIterator I = ULE->decls_begin();
+    FTD = cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+  }
+
+  if (!FTD) {
+    S.Diag(Loc, diag::err_callsite_wrapped_by_arg_not_wrapper) << AL;
+    if (ULE->getType() == S.Context.OverloadTy)
+      S.NoteAllOverloadCandidates(ULE);
+    return;
+  }
+
+  // FIXME: check that FTD has __callsite_wrapper
+  if (CallsiteWrappedByAttr *Inline = S.mergeCallsiteWrappedByAttr(D, AL, FTD))
+    D->addAttr(Inline);
+}
+
 bool Sema::CheckCountedByAttr(Scope *S, const FieldDecl *FD) {
   const auto *CBA = FD->getAttr<CountedByAttr>();
   const IdentifierInfo *FieldName = CBA->getCountedByField();
@@ -9409,6 +9448,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_CountedBy:
     handleCountedByAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_CallsiteWrappedBy:
+    handleCallsiteWrappedByAttr(S, D, AL);
     break;
 
   // Microsoft attributes:

@@ -3736,6 +3736,8 @@ public:
                                               int X, int Y, int Z);
   HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                       HLSLShaderAttr::ShaderType ShaderType);
+  CallsiteWrappedByAttr *mergeCallsiteWrappedByAttr(
+      Decl *D, const AttributeCommonInfo &CI, FunctionTemplateDecl *FD);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);

@@ -4269,3 +4269,11 @@ def CountedBy : InheritableAttr {
       void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
 }
+
+def CallsiteWrappedBy : InheritableAttr {
+  let Spellings = [GNU<"callsite_wrapped_by">];
+  let Subjects = SubjectList<[Function]>;
+  let Args = [ExprArgument<"Wrapper">];
+  // FIXME: add documentation
+  let Documentation = [Undocumented];
+}
