@@ -4152,6 +4152,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(
       if (NTTP->isCallsiteParameter()) {
         if (auto Result = DeduceCallsiteTemplateArgument(S, TemplateParams,
                                                          NTTP, Info, Deduced)) {
+          Info.Param = makeTemplateParameter(*I);
           return Result;
         }
       }
