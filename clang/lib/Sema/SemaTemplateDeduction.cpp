@@ -4137,6 +4137,9 @@ static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
     }
     return Sema::TDK_Success;
   }
+  case CallsiteTemplateParmKind::Callee:
+    // skip
+    return Sema::TDK_Success;
   default:
     return Sema::TDK_Incomplete;
   }

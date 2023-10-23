@@ -348,6 +348,31 @@ SourceLocation CXXPseudoDestructorExpr::getEndLoc() const {
   return End;
 }
 
+OverloadExpr::FindResult OverloadExpr::find(Expr *E) {
+  assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
+
+  FindResult Result;
+
+  E = E->IgnoreParens();
+  if (isa<UnaryOperator>(E)) {
+    assert(cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf);
+    E = cast<UnaryOperator>(E)->getSubExpr();
+    auto *Ovl = cast<OverloadExpr>(E->IgnoreParens());
+
+    Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
+    Result.IsAddressOfOperand = true;
+    Result.Expression = Ovl;
+  } else if (isa<SubstNonTypeTemplateParmExpr>(E)) {
+    return find(cast<SubstNonTypeTemplateParmExpr>(E)->getReplacement());
+  } else {
+    Result.HasFormOfMemberPointer = false;
+    Result.IsAddressOfOperand = false;
+    Result.Expression = cast<OverloadExpr>(E);
+  }
+
+  return Result;
+}
+
 // UnresolvedLookupExpr
 UnresolvedLookupExpr::UnresolvedLookupExpr(
     const ASTContext &Context, CXXRecordDecl *NamingClass,

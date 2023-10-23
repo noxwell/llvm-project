@@ -2921,6 +2921,8 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
   if (Result.isUsable()) {
     if (NamedDecl* D = R.getWrappedByDecl()) {
       TemplateKWLoc = NameLoc;
+      TemplateArgsBuffer.setLAngleLoc(NameLoc);
+      TemplateArgsBuffer.setRAngleLoc(NameLoc);
       TemplateArgsBuffer.addArgument(TemplateArgumentLoc(TemplateArgument(Result.get()), Result.get()));
       TemplateArgs = &TemplateArgsBuffer;
       // FIXME: get LookupResult directly from FTD

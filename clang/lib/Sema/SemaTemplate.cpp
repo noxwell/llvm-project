@@ -7122,6 +7122,13 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                        CheckTemplateArgumentKind CTAK) {
   SourceLocation StartLoc = Arg->getBeginLoc();
 
+  if (Param->callsiteParameterKind() == CallsiteTemplateParmKind::Callee) {
+    SugaredConverted = TemplateArgument(Arg);
+    CanonicalConverted = TemplateArgument(
+        Context.getCanonicalTemplateArgument(SugaredConverted));
+    return Arg;
+  }
+
   // If the parameter type somehow involves auto, deduce the type now.
   DeducedType *DeducedT = ParamType->getContainedDeducedType();
   if (getLangOpts().CPlusPlus17 && DeducedT && !DeducedT->isDeduced()) {

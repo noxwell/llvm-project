@@ -1263,7 +1263,7 @@ Corrected:
 
   if (NamedDecl* D = Result.getWrappedByDecl()) {
     SourceLocation TemplateKWLoc = NameLoc;
-    TemplateArgumentListInfo TemplateArgsBuffer;
+    TemplateArgumentListInfo TemplateArgsBuffer(NameLoc, NameLoc);
     TemplateArgsBuffer.addArgument(TemplateArgumentLoc(TemplateArgument(E), E));
     // FIXME: get LookupResult directly from FTD
     Result.setLookupName(D->getDeclName());
@@ -9882,6 +9882,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               : nullptr,
           TemplateParamLists, isFriend, isMemberSpecialization, Invalid);
     } else {
+      IdentifierInfo *NCallsiteCallee = &Context.Idents.get("__callsite_CALLEE");
+
       // TypeSourceInfo *TCallsiteLine =
       //     Context.getTrivialTypeSourceInfo(Context.getSizeType());
       IdentifierInfo *NCallsiteLine = &Context.Idents.get("__callsite_LINE");
@@ -9920,6 +9922,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // S->AddDecl(CallsiteArgs);
       // IdResolver.AddDecl(CallsiteArgs);
 
+      NamedDecl *CallsiteCallee =
+          LookupSingleName(S, NCallsiteCallee, SourceLocation(), LookupAnyName,
+                           NotForRedeclaration);
       NamedDecl *CallsiteLine =
           LookupSingleName(S, NCallsiteLine, SourceLocation(), LookupAnyName,
                            NotForRedeclaration);
@@ -9931,7 +9936,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                            NotForRedeclaration);
 
       // wrap into template parameter list
-      NamedDecl *Params[] = {CallsiteLine, CallsiteFile, CallsiteArgs};
+      NamedDecl *Params[] = {CallsiteCallee, CallsiteLine, CallsiteFile,
+                             CallsiteArgs};
       TemplateParams = TemplateParameterList::Create(Context, SourceLocation(),
                                                      SourceLocation(), Params,
                                                      SourceLocation(), nullptr);

@@ -16140,6 +16140,23 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
         type, valueKind, OK_Ordinary, TemplateArgs);
   }
 
+  if (SubstNonTypeTemplateParmExpr *SE =
+          dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
+    ExprResult SubExprResult =
+        FixOverloadedFunctionReference(SE->getReplacement(), Found, Fn);
+    if (SubExprResult.isInvalid())
+      return ExprError();
+
+    Expr *SubExpr = SubExprResult.get();
+    if (SubExpr == SE->getReplacement())
+      return SE;
+
+    return new (Context) SubstNonTypeTemplateParmExpr(
+        SubExpr->getType(), SubExpr->getValueKind(), SE->getNameLoc(), SubExpr,
+        SE->getAssociatedDecl(), SE->getIndex(), SE->getPackIndex(),
+        SE->isReferenceParameter());
+  }
+
   llvm_unreachable("Invalid reference to overloaded function");
 }
 

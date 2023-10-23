@@ -3024,28 +3024,7 @@ public:
   ///
   /// \return the expression (which must be there) and true if it has
   /// the particular form of a member pointer expression
-  static FindResult find(Expr *E) {
-    assert(E->getType()->isSpecificBuiltinType(BuiltinType::Overload));
-
-    FindResult Result;
-
-    E = E->IgnoreParens();
-    if (isa<UnaryOperator>(E)) {
-      assert(cast<UnaryOperator>(E)->getOpcode() == UO_AddrOf);
-      E = cast<UnaryOperator>(E)->getSubExpr();
-      auto *Ovl = cast<OverloadExpr>(E->IgnoreParens());
-
-      Result.HasFormOfMemberPointer = (E == Ovl && Ovl->getQualifier());
-      Result.IsAddressOfOperand = true;
-      Result.Expression = Ovl;
-    } else {
-      Result.HasFormOfMemberPointer = false;
-      Result.IsAddressOfOperand = false;
-      Result.Expression = cast<OverloadExpr>(E);
-    }
-
-    return Result;
-  }
+  static FindResult find(Expr *E);
 
   /// Gets the naming class of this lookup, if any.
   /// Defined after UnresolvedMemberExpr.
