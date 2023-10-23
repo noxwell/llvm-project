@@ -494,10 +494,31 @@ void LookupResult::resolveKind() {
   // kind of lookup this is.
   if (N == 1) {
     const NamedDecl *D = (*Decls.begin())->getUnderlyingDecl();
-    if (isa<FunctionTemplateDecl>(D))
+    if (isa<FunctionTemplateDecl>(D)) {
       ResultKind = FoundOverloaded;
-    else if (isa<UnresolvedUsingValueDecl>(D))
+    } else if (auto* FD = dyn_cast<FunctionDecl>(D)) {
+      if (auto* CWBA = FD->getAttr<CallsiteWrappedByAttr>()) {
+        UnresolvedLookupExpr *ULE = cast<UnresolvedLookupExpr>(CWBA->getWrapper());
+        FunctionTemplateDecl *FTD = nullptr;
+
+        if (ULE->getNumDecls() != 1) {
+          // FIXME: send error
+          return;
+        }
+
+        UnresolvedSetIterator I = ULE->decls_begin();
+        FTD = dyn_cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+
+        if (!FTD) {
+          // FIXME: send error
+          return;
+        }
+        Decls.clear();
+        Decls.addDecl(FTD);
+      }
+    } else if (isa<UnresolvedUsingValueDecl>(D)) {
       ResultKind = FoundUnresolvedValue;
+    }
     return;
   }
 

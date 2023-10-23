@@ -5002,14 +5002,14 @@ OptimizeNoneAttr *Sema::mergeOptimizeNoneAttr(Decl *D,
 }
 
 CallsiteWrappedByAttr *Sema::mergeCallsiteWrappedByAttr(
-    Decl *D, const AttributeCommonInfo &CI, FunctionTemplateDecl *FTD) {
+    Decl *D, const AttributeCommonInfo &CI, UnresolvedLookupExpr *ULE) {
   if (CallsiteWrappedByAttr *Attr = D->getAttr<CallsiteWrappedByAttr>()) {
     Diag(Attr->getLocation(), diag::warn_attribute_ignored) << Attr;
     Diag(CI.getLoc(), diag::note_conflicting_attribute);
     D->dropAttr<CallsiteWrappedByAttr>();
   }
 
-  return ::new (Context) CallsiteWrappedByAttr(Context, CI, FTD);
+  return ::new (Context) CallsiteWrappedByAttr(Context, CI, ULE);
 }
 
 static void handleAlwaysInlineAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8396,27 +8396,14 @@ static void handleCallsiteWrappedByAttr(Sema &S, Decl *D, const ParsedAttr &AL) 
   Expr *E = AL.getArgAsExpr(0);
   SourceLocation Loc = E->getExprLoc();
   UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E);
-  FunctionTemplateDecl *FTD = nullptr;
 
   if (!ULE) {
     S.Diag(Loc, diag::err_callsite_wrapped_by_arg_not_wrapper) << AL;
     return;
   }
 
-  if (ULE->getNumDecls() == 1) {
-    UnresolvedSetIterator I = ULE->decls_begin();
-    FTD = cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
-  }
-
-  if (!FTD) {
-    S.Diag(Loc, diag::err_callsite_wrapped_by_arg_not_wrapper) << AL;
-    if (ULE->getType() == S.Context.OverloadTy)
-      S.NoteAllOverloadCandidates(ULE);
-    return;
-  }
-
   // FIXME: check that FTD has __callsite_wrapper
-  if (CallsiteWrappedByAttr *Inline = S.mergeCallsiteWrappedByAttr(D, AL, FTD))
+  if (CallsiteWrappedByAttr *Inline = S.mergeCallsiteWrappedByAttr(D, AL, ULE))
     D->addAttr(Inline);
 }
 

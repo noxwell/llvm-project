@@ -3737,7 +3737,7 @@ public:
   HLSLShaderAttr *mergeHLSLShaderAttr(Decl *D, const AttributeCommonInfo &AL,
                                       HLSLShaderAttr::ShaderType ShaderType);
   CallsiteWrappedByAttr *mergeCallsiteWrappedByAttr(
-      Decl *D, const AttributeCommonInfo &CI, FunctionTemplateDecl *FD);
+      Decl *D, const AttributeCommonInfo &CI, UnresolvedLookupExpr *ULE);
 
   void mergeDeclAttributes(NamedDecl *New, Decl *Old,
                            AvailabilityMergeKind AMK = AMK_Redeclaration);
