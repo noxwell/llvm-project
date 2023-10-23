@@ -7180,7 +7180,8 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (checkArgsForPlaceholders(*this, ArgExprs))
     return ExprError();
 
-  if (getLangOpts().CPlusPlus) {
+  if (getLangOpts().CPlusPlus || Fn->isTypeDependent() ||
+      Expr::hasAnyTypeDependentArguments(ArgExprs)) {
     // If this is a pseudo-destructor expression, build the call immediately.
     if (isa<CXXPseudoDestructorExpr>(Fn)) {
       if (!ArgExprs.empty()) {

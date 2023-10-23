@@ -1164,6 +1164,15 @@ public:
   unsigned getIndex() const { return Position; }
 };
 
+/// Kinds of callsite template parameter.
+enum class CallsiteTemplateParmKind {
+  None,
+  Line,
+  Function,
+  File,
+  Args,
+};
+
 /// Declaration of a template type parameter.
 ///
 /// For example, "T" in
@@ -1198,6 +1207,9 @@ class TemplateTypeParmDecl final : public TypeDecl,
 
   /// The number of type parameters in an expanded parameter pack.
   unsigned NumExpanded = 0;
+
+  CallsiteTemplateParmKind CallsiteParameterKind =
+      CallsiteTemplateParmKind::None;
 
   /// The default template argument, if any.
   using DefArgStorage =
@@ -1360,17 +1372,19 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
+  bool isCallsiteParameter() const {
+    return CallsiteParameterKind != CallsiteTemplateParmKind::None;
+  }
+  CallsiteTemplateParmKind callsiteParameterKind() const {
+    return CallsiteParameterKind;
+  }
+  void setCallsiteParameterKind(CallsiteTemplateParmKind kind) {
+    CallsiteParameterKind = kind;
+  }
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TemplateTypeParm; }
-};
-
-/// Kinds of callsite template parameter.
-enum class CallsiteTemplateParmKind {
-  None,
-  Line,
-  Function,
-  File,
 };
 
 /// NonTypeTemplateParmDecl - Declares a non-type template parameter,

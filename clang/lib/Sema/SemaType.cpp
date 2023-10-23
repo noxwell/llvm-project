@@ -5930,7 +5930,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // If there was an ellipsis in the declarator, the declaration declares a
   // parameter pack whose type may be a pack expansion type.
-  if (D.hasEllipsis()) {
+  if (D.hasEllipsis() || (&T)->getAsString() == "__callsite_Args") {
     // C++0x [dcl.fct]p13:
     //   A declarator-id or abstract-declarator containing an ellipsis shall
     //   only be used in a parameter-declaration. Such a parameter-declaration

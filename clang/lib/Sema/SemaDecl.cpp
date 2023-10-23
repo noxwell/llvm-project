@@ -9864,36 +9864,56 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               : nullptr,
           TemplateParamLists, isFriend, isMemberSpecialization, Invalid);
     } else {
-      TypeSourceInfo *TCallsiteLine =
-          Context.getTrivialTypeSourceInfo(Context.getSizeType());
+      // TypeSourceInfo *TCallsiteLine =
+      //     Context.getTrivialTypeSourceInfo(Context.getSizeType());
       IdentifierInfo *NCallsiteLine = &Context.Idents.get("__callsite_LINE");
-      auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
-          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
-          /*Position=*/0,
-          /*Id=*/NCallsiteLine, TCallsiteLine->getType(),
-          /*ParameterPack=*/false, TCallsiteLine);
+      // auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
+      //     Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+      //     /*Position=*/0,
+      //     /*Id=*/NCallsiteLine, TCallsiteLine->getType(),
+      //     /*ParameterPack=*/false, TCallsiteLine);
 
-      CallsiteLine->setCallsiteParameterKind(CallsiteTemplateParmKind::Line);
-      // add to scope
-      S->AddDecl(CallsiteLine);
-      IdResolver.AddDecl(CallsiteLine);
+      // CallsiteLine->setCallsiteParameterKind(CallsiteTemplateParmKind::Line);
+      // // add to scope
+      // S->AddDecl(CallsiteLine);
+      // IdResolver.AddDecl(CallsiteLine);
 
-      TypeSourceInfo *TCallsiteFile = Context.getTrivialTypeSourceInfo(
-          Context.getIncompleteArrayType(Context.CharTy, ArrayType::Star, 0));
+      // TypeSourceInfo *TCallsiteFile = Context.getTrivialTypeSourceInfo(
+      //     Context.getIncompleteArrayType(Context.CharTy, ArrayType::Star, 0));
       IdentifierInfo *NCallsiteFile = &Context.Idents.get("__callsite_FILE");
-      auto *CallsiteFile = NonTypeTemplateParmDecl::Create(
-          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
-          /*Position=*/1,
-          /*Id=*/NCallsiteFile, TCallsiteFile->getType(),
-          /*ParameterPack=*/false, TCallsiteFile);
+      // auto *CallsiteFile = NonTypeTemplateParmDecl::Create(
+      //     Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+      //     /*Position=*/1,
+      //     /*Id=*/NCallsiteFile, TCallsiteFile->getType(),
+      //     /*ParameterPack=*/false, TCallsiteFile);
 
-      CallsiteFile->setCallsiteParameterKind(CallsiteTemplateParmKind::File);
-      // add to scope
-      S->AddDecl(CallsiteFile);
-      IdResolver.AddDecl(CallsiteFile);
+      // CallsiteFile->setCallsiteParameterKind(CallsiteTemplateParmKind::File);
+      // // add to scope
+      // S->AddDecl(CallsiteFile);
+      // IdResolver.AddDecl(CallsiteFile);
+
+      IdentifierInfo *NCallsiteArgs = &Context.Idents.get("__callsite_Args");
+      // auto *CallsiteArgs = TemplateTypeParmDecl::Create(
+      //     Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+      //     /*Position=*/2, /*Id=*/NCallsiteArgs, /*Typename=*/true,
+      //     /*ParameterPack=*/false);
+
+      // // add to scope
+      // S->AddDecl(CallsiteArgs);
+      // IdResolver.AddDecl(CallsiteArgs);
+
+      NamedDecl *CallsiteLine =
+          LookupSingleName(S, NCallsiteLine, SourceLocation(), LookupAnyName,
+                           NotForRedeclaration);
+      NamedDecl *CallsiteFile =
+          LookupSingleName(S, NCallsiteFile, SourceLocation(), LookupAnyName,
+                           NotForRedeclaration);
+      NamedDecl *CallsiteArgs =
+          LookupSingleName(S, NCallsiteArgs, SourceLocation(), LookupAnyName,
+                           NotForRedeclaration);
 
       // wrap into template parameter list
-      NamedDecl *Params[] = {CallsiteLine, CallsiteFile};
+      NamedDecl *Params[] = {CallsiteLine, CallsiteFile, CallsiteArgs};
       TemplateParams = TemplateParameterList::Create(Context, SourceLocation(),
                                                      SourceLocation(), Params,
                                                      SourceLocation(), nullptr);

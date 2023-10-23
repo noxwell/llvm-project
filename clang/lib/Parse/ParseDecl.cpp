@@ -3965,6 +3965,48 @@ void Parser::ParseDeclarationSpecifiers(
       break;
 
     case tok::kw___callsite_wrapper: {
+      Scope* S = getCurScope();
+      ASTContext &Context = Actions.Context;
+      DeclContext* DC = Context.getTranslationUnitDecl();
+      IdentifierResolver& IdResolver = Actions.IdResolver;
+      TypeSourceInfo *TCallsiteLine =
+          Context.getTrivialTypeSourceInfo(Context.getSizeType());
+      IdentifierInfo *NCallsiteLine = &Context.Idents.get("__callsite_LINE");
+      auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
+          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+          /*Position=*/0,
+          /*Id=*/NCallsiteLine, TCallsiteLine->getType(),
+          /*ParameterPack=*/false, TCallsiteLine);
+
+      CallsiteLine->setCallsiteParameterKind(CallsiteTemplateParmKind::Line);
+      // add to scope
+      S->AddDecl(CallsiteLine);
+      IdResolver.AddDecl(CallsiteLine);
+
+      TypeSourceInfo *TCallsiteFile = Context.getTrivialTypeSourceInfo(
+          Context.getIncompleteArrayType(Context.CharTy, ArrayType::Star, 0));
+      IdentifierInfo *NCallsiteFile = &Context.Idents.get("__callsite_FILE");
+      auto *CallsiteFile = NonTypeTemplateParmDecl::Create(
+          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+          /*Position=*/1,
+          /*Id=*/NCallsiteFile, TCallsiteFile->getType(),
+          /*ParameterPack=*/false, TCallsiteFile);
+
+      CallsiteFile->setCallsiteParameterKind(CallsiteTemplateParmKind::File);
+      // add to scope
+      S->AddDecl(CallsiteFile);
+      IdResolver.AddDecl(CallsiteFile);
+
+      IdentifierInfo *NCallsiteArgs = &Context.Idents.get("__callsite_Args");
+      auto *CallsiteArgs = TemplateTypeParmDecl::Create(
+          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+          /*Position=*/2, /*Id=*/NCallsiteArgs, /*Typename=*/true,
+          /*ParameterPack=*/true);
+      CallsiteArgs->setCallsiteParameterKind(CallsiteTemplateParmKind::Args);
+
+      // add to scope
+      S->AddDecl(CallsiteArgs);
+      IdResolver.AddDecl(CallsiteArgs);
       isInvalid = DS.setFunctionSpecCallsiteWrapper(Loc, PrevSpec, DiagID);
       break;
     }
