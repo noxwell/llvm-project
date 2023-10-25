@@ -2917,7 +2917,22 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     return BuildTemplateIdExpr(SS, TemplateKWLoc, R, ADL, TemplateArgs);
   }
 
-  return BuildDeclarationNameExpr(SS, R, ADL);
+  ExprResult Result = BuildDeclarationNameExpr(SS, R, ADL);
+  if (Result.isUsable()) {
+    if (NamedDecl* D = R.getWrappedByDecl()) {
+      TemplateKWLoc = NameLoc;
+      TemplateArgsBuffer.addArgument(TemplateArgumentLoc(TemplateArgument(Result.get()), Result.get()));
+      TemplateArgs = &TemplateArgsBuffer;
+      // FIXME: get LookupResult directly from FTD
+      R.setLookupName(D->getDeclName());
+      R.clear();
+      if (LookupName(R, S, /*AllowBuiltinCreation=*/true)) {
+        Result = BuildTemplateIdExpr(SS, TemplateKWLoc, R, ADL, TemplateArgs);
+      }
+    }
+  }
+
+  return Result;
 }
 
 /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified

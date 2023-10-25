@@ -493,7 +493,7 @@ void LookupResult::resolveKind() {
   // If there's a single decl, we need to examine it to decide what
   // kind of lookup this is.
   if (N == 1) {
-    const NamedDecl *D = (*Decls.begin())->getUnderlyingDecl();
+    NamedDecl *D = (*Decls.begin())->getUnderlyingDecl();
     if (isa<FunctionTemplateDecl>(D)) {
       ResultKind = FoundOverloaded;
     } else if (auto* FD = dyn_cast<FunctionDecl>(D)) {
@@ -513,8 +513,10 @@ void LookupResult::resolveKind() {
           // FIXME: send error
           return;
         }
-        Decls.clear();
-        Decls.addDecl(FTD);
+        // Decls.clear();
+        // Decls.addDecl(FTD);
+        WrappedByDecl = FTD;
+        //ResultKind = FoundOverloaded;
       }
     } else if (isa<UnresolvedUsingValueDecl>(D)) {
       ResultKind = FoundUnresolvedValue;

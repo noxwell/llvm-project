@@ -412,6 +412,12 @@ public:
     return getAcceptableDeclSlow(D);
   }
 
+  void setWrappedByDecl(NamedDecl *D) {
+    WrappedByDecl = D;
+  }
+
+  NamedDecl *getWrappedByDecl() const { return WrappedByDecl; }
+
 private:
   static bool isAcceptableSlow(Sema &SemaRef, NamedDecl *D,
                                Sema::AcceptableKind Kind);
@@ -791,6 +797,7 @@ private:
   CXXBasePaths *Paths = nullptr;
   CXXRecordDecl *NamingClass = nullptr;
   QualType BaseObjectType;
+  NamedDecl *WrappedByDecl = nullptr;
 
   // Parameters.
   Sema *SemaPtr;
