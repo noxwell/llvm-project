@@ -1250,15 +1250,33 @@ Corrected:
   // the context.
   bool ADL = UseArgumentDependentLookup(SS, Result, NextToken.is(tok::l_paren));
   if (Result.isSingleResult() && !ADL &&
+      (Result.getWrappedByDecl() == nullptr) &&
       (!FirstDecl->isCXXClassMember() || isa<EnumConstantDecl>(FirstDecl)))
     return NameClassification::NonType(Result.getRepresentativeDecl());
 
   // Otherwise, this is an overload set that we will need to resolve later.
   Result.suppressDiagnostics();
-  return NameClassification::OverloadSet(UnresolvedLookupExpr::Create(
+  Expr* E = UnresolvedLookupExpr::Create(
       Context, Result.getNamingClass(), SS.getWithLocInContext(Context),
       Result.getLookupNameInfo(), ADL, Result.isOverloadedResult(),
-      Result.begin(), Result.end()));
+      Result.begin(), Result.end());
+
+  if (NamedDecl* D = Result.getWrappedByDecl()) {
+    SourceLocation TemplateKWLoc = NameLoc;
+    TemplateArgumentListInfo TemplateArgsBuffer;
+    TemplateArgsBuffer.addArgument(TemplateArgumentLoc(TemplateArgument(E), E));
+    // FIXME: get LookupResult directly from FTD
+    Result.setLookupName(D->getDeclName());
+    Result.clear();
+    if (LookupName(Result, S, /*AllowBuiltinCreation=*/true)) {
+      ExprResult ER = BuildTemplateIdExpr(SS, TemplateKWLoc, Result, ADL, &TemplateArgsBuffer);
+      if (ER.isUsable()) {
+        E = ER.get();
+      }
+    }
+  }
+
+  return NameClassification::OverloadSet(E);
 }
 
 ExprResult
