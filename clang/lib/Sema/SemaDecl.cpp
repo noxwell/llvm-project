@@ -9882,7 +9882,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               : nullptr,
           TemplateParamLists, isFriend, isMemberSpecialization, Invalid);
     } else {
-      IdentifierInfo *NCallsiteCallee = &Context.Idents.get("__callsite_CALLEE");
+      IdentifierInfo *NCallsiteCallee = &Context.Idents.get("__callsite_Callee");
 
       IdentifierInfo *NCallsiteReturnT = &Context.Idents.get("__callsite_ReturnT");
 

@@ -3974,7 +3974,7 @@ void Parser::ParseDeclarationSpecifiers(
           Context.getAutoType(QualType(), AutoTypeKeyword::Auto,
                               /*IsDependent*/ true));
       IdentifierInfo *NCallsiteCallee =
-          &Context.Idents.get("__callsite_CALLEE");
+          &Context.Idents.get("__callsite_Callee");
       auto *CallsiteCallee = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
           /*Position=*/0,

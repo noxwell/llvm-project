@@ -4276,5 +4276,5 @@ def CallsiteWrappedBy : InheritableAttr {
   let Args = [ExprArgument<"Wrapper">];
   // FIXME: add documentation
   let Documentation = [Undocumented];
-  let LangOpts = [COnly];
+  //let LangOpts = [COnly];
 }
