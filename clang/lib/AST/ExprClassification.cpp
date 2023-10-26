@@ -42,7 +42,8 @@ Cl Expr::ClassifyImpl(ASTContext &Ctx, SourceLocation *Loc) const {
   //   incomplete type other than void.
   if (!Ctx.getLangOpts().CPlusPlus) {
     // Thus, no functions.
-    if (TR->isFunctionType() || TR == Ctx.OverloadTy)
+    // However, OverloadTy is an exception, because it comes from extensions.
+    if (TR->isFunctionType() && TR != Ctx.OverloadTy)
       kind = Cl::CL_Function;
     // No void either, but qualified void is OK because it is "other than void".
     // Void "lvalues" are classified as addressable void values, which are void

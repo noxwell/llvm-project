@@ -3973,23 +3973,38 @@ void Parser::ParseDeclarationSpecifiers(
       TypeSourceInfo *TCallsiteCallee = Context.getTrivialTypeSourceInfo(
           Context.getAutoType(QualType(), AutoTypeKeyword::Auto,
                               /*IsDependent*/ true));
-      IdentifierInfo *NCallsiteCallee = &Context.Idents.get("__callsite_CALLEE");
+      IdentifierInfo *NCallsiteCallee =
+          &Context.Idents.get("__callsite_CALLEE");
       auto *CallsiteCallee = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
           /*Position=*/0,
           /*Id=*/NCallsiteCallee, TCallsiteCallee->getType(),
           /*ParameterPack=*/false, TCallsiteCallee);
-      CallsiteCallee->setCallsiteParameterKind(CallsiteTemplateParmKind::Callee);
+      CallsiteCallee->setCallsiteParameterKind(
+          CallsiteTemplateParmKind::Callee);
       // add to scope
       S->AddDecl(CallsiteCallee);
       IdResolver.AddDecl(CallsiteCallee);
+
+      IdentifierInfo *NCallsiteReturnT =
+          &Context.Idents.get("__callsite_ReturnT");
+      auto *CallsiteReturnT = TemplateTypeParmDecl::Create(
+          Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
+          /*Position=*/1,
+          /*Id=*/NCallsiteReturnT, /*Typename=*/true,
+          /*ParameterPack=*/false, TCallsiteCallee);
+      CallsiteReturnT->setCallsiteParameterKind(
+          CallsiteTemplateParmKind::ReturnT);
+      // add to scope
+      S->AddDecl(CallsiteReturnT);
+      IdResolver.AddDecl(CallsiteReturnT);
 
       TypeSourceInfo *TCallsiteLine =
           Context.getTrivialTypeSourceInfo(Context.getSizeType());
       IdentifierInfo *NCallsiteLine = &Context.Idents.get("__callsite_LINE");
       auto *CallsiteLine = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
-          /*Position=*/1,
+          /*Position=*/2,
           /*Id=*/NCallsiteLine, TCallsiteLine->getType(),
           /*ParameterPack=*/false, TCallsiteLine);
 
@@ -4003,7 +4018,7 @@ void Parser::ParseDeclarationSpecifiers(
       IdentifierInfo *NCallsiteFile = &Context.Idents.get("__callsite_FILE");
       auto *CallsiteFile = NonTypeTemplateParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
-          /*Position=*/2,
+          /*Position=*/3,
           /*Id=*/NCallsiteFile, TCallsiteFile->getType(),
           /*ParameterPack=*/false, TCallsiteFile);
 
@@ -4015,7 +4030,7 @@ void Parser::ParseDeclarationSpecifiers(
       IdentifierInfo *NCallsiteArgs = &Context.Idents.get("__callsite_Args");
       auto *CallsiteArgs = TemplateTypeParmDecl::Create(
           Context, DC, SourceLocation(), SourceLocation(), /*Depth=*/0,
-          /*Position=*/3, /*Id=*/NCallsiteArgs, /*Typename=*/true,
+          /*Position=*/4, /*Id=*/NCallsiteArgs, /*Typename=*/true,
           /*ParameterPack=*/true);
       CallsiteArgs->setCallsiteParameterKind(CallsiteTemplateParmKind::Args);
 

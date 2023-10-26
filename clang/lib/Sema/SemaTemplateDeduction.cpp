@@ -3991,6 +3991,11 @@ static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
     const NonTypeTemplateParmDecl *NTTP, TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced);
 
+static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
+    Sema &S, TemplateParameterList *TemplateParams,
+    const TemplateTypeParmDecl *D, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced);
+
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(
     Sema &S, TemplateParameterList *TemplateParams, TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced);
@@ -4145,6 +4150,54 @@ static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
   }
 }
 
+static Sema::TemplateDeductionResult DeduceCallsiteTemplateArgument(
+    Sema &S, TemplateParameterList *TemplateParams,
+    const TemplateTypeParmDecl *D, TemplateDeductionInfo &Info,
+    SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
+  SourceLocation Loc = Info.getLocation();
+  if (Loc.isInvalid()) {
+    return Sema::TDK_Incomplete;
+  }
+  PresumedLoc PLoc = S.Context.getSourceManager().getPresumedLoc(
+      S.Context.getSourceManager().getExpansionRange(Loc).getBegin());
+  if (PLoc.isInvalid()) {
+    return Sema::TDK_Incomplete;
+  }
+  switch (D->callsiteParameterKind()) {
+  case CallsiteTemplateParmKind::ReturnT: {
+    NonTypeTemplateParmDecl *Param =
+        cast<NonTypeTemplateParmDecl>(TemplateParams->getParam(0));
+    Expr *DeductionArg = Deduced[0].getAsExpr();
+    TypeSourceInfo *TSI = S.Context.getTrivialTypeSourceInfo(
+        Param->getType(), Param->getLocation());
+    TemplateDeductionInfo Info(DeductionArg->getExprLoc(),
+                               Param->getDepth() + 1);
+    QualType ParamType;
+    Sema::TemplateDeductionResult Result =
+        S.DeduceAutoType(TSI->getTypeLoc(), DeductionArg, ParamType, Info,
+                         /*DependentDeduction=*/true,
+                         /*IgnoreConstraints=*/true);
+    if (Result != Sema::TemplateDeductionResult::TDK_Success ||
+        ParamType.isNull()) {
+      return Sema::TDK_Incomplete;
+    }
+    QualType CanonParamType = S.Context.getCanonicalType(ParamType);
+
+    Deduced[D->getIndex()] = DeducedTemplateArgument(
+        TemplateArgument(CanonParamType->castAs<PointerType>()
+                             ->getPointeeType()
+                             ->castAs<FunctionType>()
+                             ->getReturnType()));
+    return Sema::TDK_Success;
+  }
+  case CallsiteTemplateParmKind::Args:
+    // skip
+    return Sema::TDK_Success;
+  default:
+    return Sema::TDK_Incomplete;
+  }
+}
+
 static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(
     Sema &S, TemplateParameterList *TemplateParams, TemplateDeductionInfo &Info,
     SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
@@ -4155,6 +4208,15 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsFromCallsite(
       if (NTTP->isCallsiteParameter()) {
         if (auto Result = DeduceCallsiteTemplateArgument(S, TemplateParams,
                                                          NTTP, Info, Deduced)) {
+          Info.Param = makeTemplateParameter(*I);
+          return Result;
+        }
+      }
+    }
+    if (auto *D = dyn_cast_or_null<TemplateTypeParmDecl>(*I)) {
+      if (D->isCallsiteParameter()) {
+        if (auto Result = DeduceCallsiteTemplateArgument(S, TemplateParams, D,
+                                                         Info, Deduced)) {
           Info.Param = makeTemplateParameter(*I);
           return Result;
         }

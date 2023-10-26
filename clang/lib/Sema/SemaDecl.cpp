@@ -9884,6 +9884,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     } else {
       IdentifierInfo *NCallsiteCallee = &Context.Idents.get("__callsite_CALLEE");
 
+      IdentifierInfo *NCallsiteReturnT = &Context.Idents.get("__callsite_ReturnT");
+
       // TypeSourceInfo *TCallsiteLine =
       //     Context.getTrivialTypeSourceInfo(Context.getSizeType());
       IdentifierInfo *NCallsiteLine = &Context.Idents.get("__callsite_LINE");
@@ -9925,6 +9927,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       NamedDecl *CallsiteCallee =
           LookupSingleName(S, NCallsiteCallee, SourceLocation(), LookupAnyName,
                            NotForRedeclaration);
+      NamedDecl *CallsiteReturnT =
+          LookupSingleName(S, NCallsiteReturnT, SourceLocation(), LookupAnyName,
+                           NotForRedeclaration);
       NamedDecl *CallsiteLine =
           LookupSingleName(S, NCallsiteLine, SourceLocation(), LookupAnyName,
                            NotForRedeclaration);
@@ -9936,8 +9941,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                            NotForRedeclaration);
 
       // wrap into template parameter list
-      NamedDecl *Params[] = {CallsiteCallee, CallsiteLine, CallsiteFile,
-                             CallsiteArgs};
+      NamedDecl *Params[] = {CallsiteCallee, CallsiteReturnT, CallsiteLine,
+                             CallsiteFile, CallsiteArgs};
       TemplateParams = TemplateParameterList::Create(Context, SourceLocation(),
                                                      SourceLocation(), Params,
                                                      SourceLocation(), nullptr);

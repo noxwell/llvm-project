@@ -1172,6 +1172,7 @@ enum class CallsiteTemplateParmKind {
   File,
   Args,
   Callee,
+  ReturnT,
 };
 
 /// Declaration of a template type parameter.
