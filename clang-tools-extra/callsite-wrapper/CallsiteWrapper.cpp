@@ -176,9 +176,9 @@ int main(int argc, const char **argv) {
   ast_matchers::MatchFinder Finder;
   CallsiteWrapperCallback CallsiteWrapper(Tool.getReplacements());
 
-  Finder.addMatcher(callExpr(callee(functionDecl(hasCallsiteWrappedByAttr())))
-                        .bind("callsite_wrapped_by"),
-                    &CallsiteWrapper);
+  Finder.addMatcher(
+      callExpr(callee(hasCallsiteWrappedByAttr())).bind("callsite_wrapped_by"),
+      &CallsiteWrapper);
 
   auto Factory = newFrontendActionFactory(&Finder);
   int ExitCode = Tool.run(Factory.get());
