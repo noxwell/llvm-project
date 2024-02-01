@@ -4017,6 +4017,8 @@ FunctionDecl::TemplatedKind FunctionDecl::getTemplatedKind() const {
   if (isa<DependentFunctionTemplateSpecializationInfo *>(
           TemplateOrSpecialization))
     return TK_DependentFunctionTemplateSpecialization;
+  if (TemplateOrSpecialization.is<CallsiteWrapperSpecializationInfo*>())
+    return TK_DependentNonTemplate;
 
   llvm_unreachable("Did we miss a TemplateOrSpecialization type?");
 }
@@ -4047,6 +4049,27 @@ FunctionDecl::setInstantiationOfMemberFunction(ASTContext &C,
   MemberSpecializationInfo *Info
     = new (C) MemberSpecializationInfo(FD, TSK);
   TemplateOrSpecialization = Info;
+}
+
+CallsiteWrapperSpecializationInfo *
+FunctionDecl::getCallsiteWrapperSpecializationInfo() const {
+  if (auto *CWSI = TemplateOrSpecialization
+                       .dyn_cast<CallsiteWrapperSpecializationInfo *>())
+    return CWSI;
+  return nullptr;
+}
+
+void FunctionDecl::setInstantiationOfCallsiteWrapper(
+    ASTContext &C, FunctionDecl *CallsiteWrapper) {
+  assert(TemplateOrSpecialization.isNull() &&
+         "Callsite wrapper instantiation is already a specialization");
+  CallsiteWrapperSpecializationInfo *Info =
+      new (C) CallsiteWrapperSpecializationInfo(CallsiteWrapper);
+  TemplateOrSpecialization = Info;
+}
+
+bool FunctionDecl::isCallsiteWrapperSpecialization() const {
+  return TemplateOrSpecialization.is<CallsiteWrapperSpecializationInfo *>();
 }
 
 FunctionTemplateDecl *FunctionDecl::getDescribedFunctionTemplate() const {
@@ -4147,6 +4170,11 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
         !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
     return getDefinitionOrSelf(cast<FunctionDecl>(Info->getInstantiatedFrom()));
+  }
+
+  if (CallsiteWrapperSpecializationInfo *Info =
+          getCallsiteWrapperSpecializationInfo()) {
+    return Info->getInstantiatedFrom();
   }
 
   if (ForDefinition &&
@@ -4292,6 +4320,10 @@ TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
       getFriendObjectKind() == FOK_None)
     return TSK_ExplicitSpecialization;
 
+  if (TemplateOrSpecialization.is<CallsiteWrapperSpecializationInfo *>()) {
+    return TSK_ImplicitInstantiation;
+  }
+
   return TSK_Undeclared;
 }
 
@@ -4336,6 +4368,10 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
       getFriendObjectKind() == FOK_None)
     return TSK_ExplicitSpecialization;
 
+  if (TemplateOrSpecialization.is<CallsiteWrapperSpecializationInfo *>()) {
+    return TSK_ImplicitInstantiation;
+  }
+
   return TSK_Undeclared;
 }
 
@@ -4363,6 +4399,10 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
       if (ASTMutationListener *L = getASTContext().getASTMutationListener())
         L->InstantiationRequested(this);
     }
+  } else if (CallsiteWrapperSpecializationInfo *CWSInfo =
+                 TemplateOrSpecialization
+                     .dyn_cast<CallsiteWrapperSpecializationInfo *>()) {
+    CWSInfo->setPointOfInstantiation(PointOfInstantiation);
   } else
     llvm_unreachable("Function cannot have a template specialization kind");
 }
@@ -4375,6 +4415,10 @@ SourceLocation FunctionDecl::getPointOfInstantiation() const {
   if (MemberSpecializationInfo *MSInfo =
           TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getPointOfInstantiation();
+  if (CallsiteWrapperSpecializationInfo *CWSInfo =
+          TemplateOrSpecialization
+              .dyn_cast<CallsiteWrapperSpecializationInfo *>())
+    return CWSInfo->getPointOfInstantiation();
 
   return SourceLocation();
 }

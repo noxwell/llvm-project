@@ -2234,6 +2234,19 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   if (FunctionRewriteKind != RewriteKind::None)
     adjustForRewrite(FunctionRewriteKind, D, T, TInfo, NameInfo);
 
+  if (D->hasAttr<CallsiteWrapperAttr>()) {
+    assert(!SemaRef.CodeSynthesisContexts.empty());
+    SourceLocation Loc =
+        SemaRef.CodeSynthesisContexts.back().PointOfInstantiation;
+    SmallString<64> NewNameStr;
+    StringRef NewName =
+        (D->getName() + "." + std::to_string(Loc.getRawEncoding()))
+            .toStringRef(NewNameStr);
+
+    NameInfo =
+        DeclarationNameInfo(&SemaRef.PP.getIdentifierTable().get(NewName), Loc);
+  }
+
   FunctionDecl *Function;
   if (auto *DGuide = dyn_cast<CXXDeductionGuideDecl>(D)) {
     Function = CXXDeductionGuideDecl::Create(
@@ -2324,6 +2337,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
       // definition. We don't want non-template functions to be marked as being
       // template instantiations.
       Function->setInstantiationOfMemberFunction(D, TSK_ImplicitInstantiation);
+    } else if (D->hasAttr<CallsiteWrapperAttr>()) {
+      Function->setInstantiationOfCallsiteWrapper(D);
     } else if (!isFriend) {
       // If this is not a function template, and this is not a friend (that is,
       // this is a locally declared function), save the instantiation

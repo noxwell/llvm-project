@@ -13466,15 +13466,30 @@ TreeTransform<Derived>::TransformCXXMemberCallExpr(CXXMemberCallExpr *E) {
 
 template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
+  SourceLocation Loc = E->getBeginLoc();
+  DeclContext* Context = getSema().CurContext;
+  bool CallsiteWrapped = false;
+
+  if (!getSema().CodeSynthesisContexts.empty()) {
+    const Sema::CodeSynthesisContext &C =
+        getSema().CodeSynthesisContexts.back();
+    if (FunctionDecl *FD = dyn_cast_if_present<FunctionDecl>(C.Entity)) {
+      if (CallsiteWrapperSpecializationInfo *Info =
+              FD->getCallsiteWrapperSpecializationInfo()) {
+        CallsiteWrapped = true;
+        Loc = Info->getPointOfInstantiation();
+        Context = Info->getCalleeContext();
+      }
+    }
+  }
   bool NeedRebuildFunc = SourceLocExpr::MayBeDependent(E->getIdentKind()) &&
                          getSema().CurContext != E->getParentContext();
 
-  if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)
+  if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc && !CallsiteWrapped)
     return E;
 
-  return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
-                                           E->getBeginLoc(), E->getEndLoc(),
-                                           getSema().CurContext);
+  return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(), Loc,
+                                           E->getEndLoc(), Context);
 }
 
 template <typename Derived>

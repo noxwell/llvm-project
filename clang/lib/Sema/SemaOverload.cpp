@@ -16326,6 +16326,12 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
       }
     }
 
+    if (Fn->hasAttr<CallsiteWrapperAttr>()) {
+      CXXScopeSpec SS;
+      return BuildCallsiteWrapperDeclarationNameExpr(SS, ULE->getNameInfo(), Fn,
+                                                     false);
+    }
+
     DeclRefExpr *DRE = BuildDeclRefExpr(
         Fn, Type, ValueKind, ULE->getNameInfo(), ULE->getQualifierLoc(),
         Found.getDecl(), ULE->getTemplateKeywordLoc(), TemplateArgs);

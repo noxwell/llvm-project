@@ -63,6 +63,7 @@ class FunctionTemplateSpecializationInfo;
 class FunctionTypeLoc;
 class LabelStmt;
 class MemberSpecializationInfo;
+class CallsiteWrapperSpecializationInfo;
 class Module;
 class NamespaceDecl;
 class ParmVarDecl;
@@ -2033,7 +2034,8 @@ private:
   /// that specialization.
   llvm::PointerUnion<NamedDecl *, MemberSpecializationInfo *,
                      FunctionTemplateSpecializationInfo *,
-                     DependentFunctionTemplateSpecializationInfo *>
+                     DependentFunctionTemplateSpecializationInfo *,
+                     CallsiteWrapperSpecializationInfo *>
       TemplateOrSpecialization;
 
   /// Provides source/type location info for the declaration name embedded in
@@ -2851,6 +2853,18 @@ public:
                                         TemplateSpecializationKind TSK) {
     setInstantiationOfMemberFunction(getASTContext(), FD, TSK);
   }
+
+  CallsiteWrapperSpecializationInfo *
+  getCallsiteWrapperSpecializationInfo() const;
+
+  void setInstantiationOfCallsiteWrapper(ASTContext &C,
+                                         FunctionDecl *CallsiteWrapper);
+
+  void setInstantiationOfCallsiteWrapper(FunctionDecl *CallsiteWrapper) {
+    setInstantiationOfCallsiteWrapper(getASTContext(), CallsiteWrapper);
+  }
+
+  bool isCallsiteWrapperSpecialization() const;
 
   /// Specify that this function declaration was instantiated from a
   /// FunctionDecl FD. This is only used if this is a function declaration

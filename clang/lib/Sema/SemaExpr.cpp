@@ -3183,6 +3183,15 @@ static bool ShouldLookupResultBeMultiVersionOverload(const LookupResult &R) {
          (FD->isCPUDispatchMultiVersion() || FD->isCPUSpecificMultiVersion());
 }
 
+static bool IsASingleCallsiteWrapper(const LookupResult &R) {
+  if (R.isSingleResult()) {
+    if (const auto* FD = dyn_cast<FunctionDecl>(R.getFoundDecl())) {
+      return FD->hasAttr<CallsiteWrapperAttr>();
+    }
+  }
+  return false;
+}
+
 ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
                                           LookupResult &R, bool NeedsADL,
                                           bool AcceptInvalidDecl) {
@@ -3190,10 +3199,12 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   // just build an ordinary singleton decl ref.
   if (!NeedsADL && R.isSingleResult() &&
       !R.getAsSingle<FunctionTemplateDecl>() &&
-      !ShouldLookupResultBeMultiVersionOverload(R))
+      !IsASingleCallsiteWrapper(R) &&
+      !ShouldLookupResultBeMultiVersionOverload(R)) {
     return BuildDeclarationNameExpr(SS, R.getLookupNameInfo(), R.getFoundDecl(),
                                     R.getRepresentativeDecl(), nullptr,
                                     AcceptInvalidDecl);
+  }
 
   // We only need to check the declaration if there's exactly one
   // result, because in the overloaded case the results can only be
@@ -3208,10 +3219,16 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   // we've picked a target.
   R.suppressDiagnostics();
 
+  bool KnownDependent = false;
+  bool KnownInstantiationDependent = false;
+  if (CurContext->isDependentContext() && IsASingleCallsiteWrapper(R)) {
+    KnownDependent = KnownInstantiationDependent = true;
+  }
+
   UnresolvedLookupExpr *ULE = UnresolvedLookupExpr::Create(
       Context, R.getNamingClass(), SS.getWithLocInContext(Context),
       R.getLookupNameInfo(), NeedsADL, R.begin(), R.end(),
-      /*KnownDependent=*/false, /*KnownInstantiationDependent=*/false);
+      KnownDependent, KnownInstantiationDependent);
 
   return ULE;
 }
@@ -6552,6 +6569,11 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                        RParenLoc, ExecConfig, IsExecConfig,
                                        AllowRecovery);
     }
+  }
+
+  if (Fn->isTypeDependent()) {
+    return CallExpr::Create(Context, Fn, ArgExprs, Context.DependentTy,
+                            VK_PRValue, RParenLoc, CurFPFeatureOverrides());
   }
 
   // Check for overloaded calls.  This can happen even in C due to extensions.

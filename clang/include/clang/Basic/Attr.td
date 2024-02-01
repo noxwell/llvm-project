@@ -4929,3 +4929,10 @@ def NoTrivialAutoVarInit: InheritableAttr {
   let Documentation = [NoTrivialAutoVarInitDocs];
   let SimpleHandler = 1;
 }
+
+def CallsiteWrapper : InheritableAttr {
+  let Spellings = [GNU<"callsite_wrapper">];
+  let Subjects = SubjectList<[Function]>;
+  // FIXME: add documentation
+  let Documentation = [Undocumented];
+}

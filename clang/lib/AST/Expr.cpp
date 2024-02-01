@@ -2237,6 +2237,13 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
   return true;
 }
 
+static bool IsCallsiteWrapperContext(DeclContext *Context) {
+  if (const auto* FD = dyn_cast<FunctionDecl>(Context)) {
+    return FD->hasAttr<CallsiteWrapperAttr>();
+  }
+  return false;
+}
+
 SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
                              QualType ResultTy, SourceLocation BLoc,
                              SourceLocation RParenLoc,
@@ -2245,7 +2252,8 @@ SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
   SourceLocExprBits.Kind = llvm::to_underlying(Kind);
   // In dependent contexts, function names may change.
-  setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext()
+  setDependence(MayBeDependent(Kind) && ParentContext->isDependentContext() &&
+                        !IsCallsiteWrapperContext(ParentContext)
                     ? ExprDependence::Value
                     : ExprDependence::None);
 }

@@ -7945,6 +7945,29 @@ private:
   //
   //
 
+  /// \name Callsite wrapper attribute
+  /// Implementations are in SemaCallsiteWrapper.cpp
+  ///@{
+
+public:
+
+  /// BuildCallsiteWrapperDeclarationNameExpr - Build expression with function
+  /// declaration transformed to include callsite source location information.
+  ///
+  /// Clang extension: __attribute__((callsite_wrapper))
+  /// Implemented in SemaCallsiteWrapper.cpp
+  ExprResult BuildCallsiteWrapperDeclarationNameExpr(
+      const CXXScopeSpec &SS, const DeclarationNameInfo &NameInfo,
+      FunctionDecl *FD, bool AcceptInvalidDecl);
+
+  ///@}
+
+  //
+  //
+  // -------------------------------------------------------------------------
+  //
+  //
+
   /// \name C++ Expressions
   /// Implementations are in SemaExprCXX.cpp
   ///@{

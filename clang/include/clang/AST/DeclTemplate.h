@@ -716,6 +716,40 @@ public:
   }
 };
 
+class CallsiteWrapperSpecializationInfo {
+  FunctionDecl *CallsiteWrapper;
+
+  SourceLocation PointOfInstantiation;
+
+  DeclContext *CalleeContext;
+
+public:
+  explicit CallsiteWrapperSpecializationInfo(FunctionDecl *CallsiteWrapper)
+      : CallsiteWrapper(CallsiteWrapper) {}
+
+  FunctionDecl *getInstantiatedFrom() const { return CallsiteWrapper; }
+
+  TemplateSpecializationKind getTemplateSpecializationKind() const {
+    return TSK_ImplicitInstantiation;
+  }
+
+  SourceLocation getPointOfInstantiation() const {
+    return PointOfInstantiation;
+  }
+
+  void setPointOfInstantiation(SourceLocation POI) {
+    PointOfInstantiation = POI;
+  }
+
+  void setCalleeContext(DeclContext *DC) {
+    CalleeContext = DC;
+  }
+
+  DeclContext *getCalleeContext() const {
+    return CalleeContext;
+  }
+};
+
 /// Declaration of a redeclarable template.
 class RedeclarableTemplateDecl : public TemplateDecl,
                                  public Redeclarable<RedeclarableTemplateDecl>

@@ -1352,6 +1352,11 @@ bool DeclContext::isDependentContext() const {
     if (Function->getDescribedFunctionTemplate())
       return true;
 
+    // Callsite wrapper is dependent until it is instantiated.
+    if (Function->hasAttr<CallsiteWrapperAttr>() &&
+        !Function->isCallsiteWrapperSpecialization())
+      return true;
+
     // Friend function declarations are dependent if their *lexical*
     // context is dependent.
     if (cast<Decl>(this)->getFriendObjectKind())
