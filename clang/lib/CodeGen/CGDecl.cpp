@@ -254,7 +254,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
 
   // Use the label if the variable is renamed with the asm-label extension.
   std::string Name;
-  if (D.hasAttr<AsmLabelAttr>())
+  if (D.hasAttr<AsmLabelAttr>() || hasCallsiteWrapperContext())
     Name = std::string(getMangledName(&D));
   else
     Name = getStaticDeclName(*this, D);

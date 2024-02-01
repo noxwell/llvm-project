@@ -1840,6 +1840,10 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     }
   }
 
+  if (CGM.hasCallsiteWrapperContext()) {
+    Out << CGM.getCallsiteWrapperPrefix();
+  }
+
   // Check if the module name hash should be appended for internal linkage
   // symbols.   This should come before multi-version target suffixes are
   // appended. This is to keep the name and module hash suffix of the
@@ -7632,4 +7636,12 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->TBAA = std::move(TBAA);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+bool CodeGenModule::hasCallsiteWrapperContext() {
+  return !CurrentCallsiteWrapperScope.Empty();
+}
+
+StringRef CodeGenModule::getCallsiteWrapperPrefix() {
+  return CurrentCallsiteWrapperScope.GetNamePrefix();
 }

@@ -17,6 +17,7 @@
 #include "CodeGenTypeCache.h"
 #include "CodeGenTypes.h"
 #include "SanitizerMetadata.h"
+#include "clang/AST/CallsiteWrapperScope.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclOpenMP.h"
@@ -606,6 +607,8 @@ private:
   // when used with -fincremental-extensions.
   std::pair<std::unique_ptr<CodeGenFunction>, const TopLevelStmtDecl *>
       GlobalTopLevelStmtBlockInFlight;
+
+  CallsiteWrapperScope CurrentCallsiteWrapperScope;
 
 public:
   CodeGenModule(ASTContext &C, IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -1580,6 +1583,9 @@ public:
                      llvm::Constant *AssociatedData = nullptr);
   void AddGlobalDtor(llvm::Function *Dtor, int Priority = 65535,
                      bool IsDtorAttrFunc = false);
+
+  bool hasCallsiteWrapperContext();
+  StringRef getCallsiteWrapperPrefix();
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
