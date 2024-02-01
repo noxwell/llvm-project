@@ -2272,19 +2272,138 @@ NonOdrUseReason Sema::getNonOdrUseReasonInCurrentContext(ValueDecl *D) {
   return NOUR_None;
 }
 
+class CallsiteWrapperTransformer
+    : public TreeTransform<CallsiteWrapperTransformer> {
+  DeclarationNameInfo &NewName;
+  DeclContext *SLEParentContext;
+  SourceLocation SLELocation;
+
+public:
+  typedef TreeTransform<CallsiteWrapperTransformer> inherited;
+
+  CallsiteWrapperTransformer(Sema &SemaRef, DeclarationNameInfo &NewName,
+                             DeclContext *SLEParentContext,
+                             SourceLocation SLELocation)
+      : TreeTransform<CallsiteWrapperTransformer>(SemaRef), NewName(NewName),
+        SLEParentContext(SLEParentContext), SLELocation(SLELocation) {}
+
+  ParmVarDecl *TransformParmVarDecl(ParmVarDecl* P, DeclContext *DC) {
+    return ParmVarDecl::Create(
+        SemaRef.Context, DC, P->getInnerLocStart(),
+        P->getLocation(), P->getIdentifier(), P->getType(),
+        P->getTypeSourceInfo(), P->getStorageClass(), P->getDefaultArg());
+  }
+
+  FunctionDecl *TransformFunctionDecl(FunctionDecl *FD) {
+    if (FD == nullptr) {
+      return FD;
+    }
+
+    FunctionDecl *NewFD = FunctionDecl::Create(
+        SemaRef.Context, FD->getDeclContext(), FD->getInnerLocStart(), NewName,
+        FD->getType(), FD->getTypeSourceInfo(), FD->getStorageClass(),
+        FD->UsesFPIntrin(), FD->isInlineSpecified(), FD->hasWrittenPrototype(),
+        FD->getConstexprKind(), FD->getTrailingRequiresClause());
+
+    for (const auto *Attr : FD->attrs())
+      NewFD->addAttr(Attr->clone(SemaRef.Context));
+
+    SmallVector<ParmVarDecl *, 8> NewParameters;
+    for (auto *P : FD->parameters()) {
+      ParmVarDecl *NewP = TransformParmVarDecl(P, NewFD);
+      NewParameters.push_back(NewP);
+      TransformedLocalDecls[P] = NewP;
+    }
+    NewFD->setParams(NewParameters);
+
+    SemaRef.Context.getTranslationUnitDecl()->addDecl(NewFD);
+    SemaRef.ActOnStartOfFunctionDef(nullptr, NewFD);
+    Sema::ContextRAII SwitchContext(SemaRef, NewFD);
+
+    StmtResult NewBody = TransformStmt(FD->getBody());
+    assert(NewBody.isUsable());
+    //NewFD->setBody(NewBody.get());
+    SemaRef.ActOnFinishFunctionBody(NewFD, NewBody.get(), /*IsInstantiation=*/true);
+
+    // FIXME: check what else is not copied
+
+    return NewFD;
+  }
+
+  VarDecl *TransformVarDefinition(VarDecl *VD) {
+    if (VD == nullptr) {
+      return VD;
+    }
+    VarDecl *NewVD = VarDecl::Create(
+        SemaRef.Context, SemaRef.CurContext, VD->getInnerLocStart(),
+        VD->getLocation(), VD->getIdentifier(), VD->getType(),
+        VD->getTypeSourceInfo(), VD->getStorageClass());
+
+    if (Expr* Init = VD->getInit()) {
+      ExprResult NewInit = TransformExpr(Init);
+      assert(NewInit.isUsable());
+      SemaRef.AddInitializerToDecl(NewVD, NewInit.get(), /*DirectInit=*/false);
+    }
+
+    for (const auto *Attr : VD->attrs())
+      NewVD->addAttr(Attr->clone(SemaRef.Context));
+
+    // FIXME: check what else is not copied
+
+    return NewVD;
+  }
+
+  Decl *TransformDefinition(SourceLocation Loc, Decl *D) {
+    llvm::DenseMap<Decl *, Decl *>::iterator Known =
+        TransformedLocalDecls.find(D);
+    if (Known != TransformedLocalDecls.end())
+      return Known->second;
+    if (auto *VD = dyn_cast<VarDecl>(D)) {
+      return TransformedLocalDecls[D] = TransformVarDefinition(VD);
+    }
+    return D;
+  }
+
+  ExprResult TransformSourceLocExpr(SourceLocExpr *E) {
+    return SemaRef.BuildSourceLocExpr(E->getIdentKind(), E->getType(),
+                                      SLELocation, SLELocation,
+                                      SLEParentContext);
+  }
+};
+
 /// BuildDeclRefExpr - Build an expression that references a
 /// declaration that does not require a closure capture.
 DeclRefExpr *
 Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
-                       const DeclarationNameInfo &NameInfo,
+                       const DeclarationNameInfo &NameInfoRef,
                        NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
                        const TemplateArgumentListInfo *TemplateArgs) {
+  const DeclarationNameInfo *NameInfo = &NameInfoRef;
   bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
-                                  NeedToCaptureVariable(D, NameInfo.getLoc());
+                                  NeedToCaptureVariable(D, NameInfo->getLoc());
+
+  DeclarationNameInfo NewNameInfo;
+  if (D == FoundD) {
+    if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+      if (FD->hasAttr<CallsiteWrapperAttr>()) {
+        std::string NewNameStr =
+            FD->getNameAsString() + "." +
+            std::to_string(NameInfo->getLoc().getRawEncoding());
+
+        NewNameInfo = DeclarationNameInfo(
+            &PP.getIdentifierTable().get(NewNameStr), NameInfo->getLoc());
+        D = CallsiteWrapperTransformer(*this, NewNameInfo, CurContext,
+                                       NameInfo->getLoc())
+                .TransformFunctionDecl(FD);
+        FoundD = D;
+        NameInfo = &NewNameInfo;
+      }
+    }
+  }
 
   DeclRefExpr *E = DeclRefExpr::Create(
-      Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
+      Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, *NameInfo, Ty,
       VK, FoundD, TemplateArgs, getNonOdrUseReasonInCurrentContext(D));
   MarkDeclRefReferenced(E);
 
@@ -2302,7 +2421,7 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
   //     computation rather than computing a new body.
   if (const auto *FPT = Ty->getAs<FunctionProtoType>()) {
     if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
-      if (const auto *NewFPT = ResolveExceptionSpec(NameInfo.getLoc(), FPT))
+      if (const auto *NewFPT = ResolveExceptionSpec(NameInfo->getLoc(), FPT))
         E->setType(Context.getQualifiedType(NewFPT, Ty.getQualifiers()));
     }
   }

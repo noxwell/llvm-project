@@ -9848,6 +9848,10 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_UsingIfExists:
     handleSimpleAttribute<UsingIfExistsAttr>(S, D, AL);
     break;
+
+  case ParsedAttr::AT_CallsiteWrapper:
+    handleSimpleAttribute<CallsiteWrapperAttr>(S, D, AL);
+    break;
   }
 }
 

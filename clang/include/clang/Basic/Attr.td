@@ -4458,3 +4458,10 @@ def CountedBy : InheritableAttr {
       void setCountedByFieldLoc(SourceRange Loc) { CountedByFieldLoc = Loc; }
   }];
 }
+
+def CallsiteWrapper : InheritableAttr {
+  let Spellings = [GNU<"callsite_wrapper">];
+  let Subjects = SubjectList<[Function]>;
+  // FIXME: add documentation
+  let Documentation = [Undocumented];
+}
