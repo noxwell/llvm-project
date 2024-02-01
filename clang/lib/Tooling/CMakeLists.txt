@@ -68,7 +68,6 @@ else()
         -I ${LLVM_BINARY_DIR}/tools/clang/include
         -I ${LLVM_BINARY_DIR}/include
         -I ${LLVM_SOURCE_DIR}/include
-        ${implicitDirs}
         --json-output-path ${CMAKE_CURRENT_BINARY_DIR}/ASTNodeAPI.json
   )
 
