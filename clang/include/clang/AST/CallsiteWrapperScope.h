@@ -23,28 +23,24 @@ class CallsiteWrapperScope {
   std::string NamePrefix;
 
 public:
-  bool Empty() {
-    return NamePrefix.empty();
-  }
+  bool Empty() { return NamePrefix.empty(); }
 
-  llvm::StringRef GetNamePrefix() {
-    return NamePrefix;
-  }
+  llvm::StringRef GetNamePrefix() { return NamePrefix; }
 
   explicit CallsiteWrapperScope() = default;
 
+  class Guard;
+
 private:
   explicit CallsiteWrapperScope(std::string NamePrefix)
-      : NamePrefix(NamePrefix) {}
-
-  class Guard;
+      : NamePrefix(std::move(NamePrefix)) {}
 };
 
 class CallsiteWrapperScope::Guard {
 public:
   Guard(std::string NamePrefix, CallsiteWrapperScope &Current)
       : Current(Current), OldVal(Current) {
-    Current = CallsiteWrapperScope(NamePrefix);
+    Current = CallsiteWrapperScope(std::move(NamePrefix));
   }
 
   ~Guard() { Current = OldVal; }

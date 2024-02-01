@@ -246,15 +246,16 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // them. It is possible to reference them before emitting the function that
   // contains them, and it is possible to emit the containing function multiple
   // times.
-  if (llvm::Constant *ExistingGV = StaticLocalDeclMap[&D])
-    return ExistingGV;
+  if (!hasCallsiteWrapperContext())
+    if (llvm::Constant *ExistingGV = StaticLocalDeclMap[&D])
+      return ExistingGV;
 
   QualType Ty = D.getType();
   assert(Ty->isConstantSizeType() && "VLAs can't be static");
 
   // Use the label if the variable is renamed with the asm-label extension.
   std::string Name;
-  if (D.hasAttr<AsmLabelAttr>() || hasCallsiteWrapperContext())
+  if (D.hasAttr<AsmLabelAttr>())
     Name = std::string(getMangledName(&D));
   else
     Name = getStaticDeclName(*this, D);
@@ -295,7 +296,8 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
                                getContext().getTargetAddressSpace(ExpectedAS)));
   }
 
-  setStaticLocalDeclAddress(&D, Addr);
+  if (!hasCallsiteWrapperContext())
+    setStaticLocalDeclAddress(&D, Addr);
 
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.

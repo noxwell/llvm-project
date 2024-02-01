@@ -5402,6 +5402,16 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
         MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
+  std::optional<CallsiteWrapperScope::Guard> callsiteWrapperScopeGuard;
+  if (const auto *FD = dyn_cast<FunctionDecl>(E->getCalleeDecl())) {
+    if (FD->hasAttr<CallsiteWrapperAttr>()) {
+      // FIXME: getHashValue doesn't guarantee uniqueness!
+      callsiteWrapperScopeGuard.emplace(
+          std::to_string(E->getBeginLoc().getHashValue()),
+          CGM.getCurrentCallsiteWrapperScope());
+    }
+  }
+
   CGCallee callee = EmitCallee(E->getCallee());
 
   if (callee.isBuiltin()) {

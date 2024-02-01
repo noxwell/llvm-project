@@ -1954,7 +1954,13 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // static device variable depends on whether the variable is referenced by
   // a host or device host function. Therefore the mangled name cannot be
   // cached.
-  if (!LangOpts.CUDAIsDevice || !getContext().mayExternalize(GD.getDecl())) {
+  bool CanBeCached =
+      !LangOpts.CUDAIsDevice || !getContext().mayExternalize(GD.getDecl());
+
+  if (hasCallsiteWrapperContext())
+    CanBeCached = false;
+
+  if (CanBeCached) {
     auto FoundName = MangledDeclNames.find(CanonicalGD);
     if (FoundName != MangledDeclNames.end())
       return FoundName->second;
@@ -4548,6 +4554,11 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   llvm::Function *F =
       llvm::Function::Create(FTy, llvm::Function::ExternalLinkage,
                              Entry ? StringRef() : MangledName, &getModule());
+
+  if (hasCallsiteWrapperContext()) {
+    // FIXME: hack
+    EmitGlobalDefinition(GD, F);
+  }
 
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.
@@ -7640,6 +7651,10 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
 
 bool CodeGenModule::hasCallsiteWrapperContext() {
   return !CurrentCallsiteWrapperScope.Empty();
+}
+
+CallsiteWrapperScope& CodeGenModule::getCurrentCallsiteWrapperScope() {
+  return CurrentCallsiteWrapperScope;
 }
 
 StringRef CodeGenModule::getCallsiteWrapperPrefix() {

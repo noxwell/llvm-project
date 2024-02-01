@@ -1585,6 +1585,7 @@ public:
                      bool IsDtorAttrFunc = false);
 
   bool hasCallsiteWrapperContext();
+  CallsiteWrapperScope& getCurrentCallsiteWrapperScope();
   StringRef getCallsiteWrapperPrefix();
 
 private:
