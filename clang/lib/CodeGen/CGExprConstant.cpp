@@ -1786,7 +1786,8 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
   if (destType->isReferenceType())
     Success = E->EvaluateAsLValue(Result, CGM.getContext());
   else
-    Success = E->EvaluateAsRValue(Result, CGM.getContext(), InConstantContext);
+    Success = E->EvaluateAsRValue(Result, CGM.getContext(), InConstantContext,
+                                  &CGF->CurSourceLocExprScope);
 
   if (Success && !Result.HasSideEffects)
     return tryEmitPrivate(Result.Val, destType);

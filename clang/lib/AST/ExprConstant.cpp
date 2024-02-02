@@ -15558,11 +15558,18 @@ static bool EvaluateAsFixedPoint(const Expr *E, Expr::EvalResult &ExprResult,
 /// in Result. If this expression is a glvalue, an lvalue-to-rvalue conversion
 /// will be applied to the result.
 bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
-                            bool InConstantContext) const {
+                            bool InConstantContext,
+                            CurrentSourceLocExprScope *SourceLocExprScope) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsRValue");
   EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
+  std::optional<CurrentSourceLocExprScope::SourceLocExprScopeGuard> Guard;
+  if (SourceLocExprScope != nullptr &&
+      SourceLocExprScope->getDefaultExpr() != nullptr) {
+    Guard.emplace(SourceLocExprScope->getDefaultExpr(),
+                  Info.BottomFrame.CurSourceLocExprScope);
+  }
   Info.InConstantContext = InConstantContext;
   return ::EvaluateAsRValue(this, Result, Ctx, Info);
 }

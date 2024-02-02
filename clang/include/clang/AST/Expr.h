@@ -47,6 +47,7 @@ namespace clang {
   class CXXMemberCallExpr;
   class CXXOperatorCallExpr;
   class CastExpr;
+  class CurrentSourceLocExprScope;
   class Decl;
   class IdentifierInfo;
   class MaterializeTemporaryExpr;
@@ -641,8 +642,9 @@ public:
   /// this function returns true, it returns the folded constant in Result. If
   /// the expression is a glvalue, an lvalue-to-rvalue conversion will be
   /// applied.
-  bool EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
-                        bool InConstantContext = false) const;
+  bool EvaluateAsRValue(
+      EvalResult &Result, const ASTContext &Ctx, bool InConstantContext = false,
+      CurrentSourceLocExprScope *SourceLocExprScope = nullptr) const;
 
   /// EvaluateAsBooleanCondition - Return true if this is a constant
   /// which we can fold and convert to a boolean condition using

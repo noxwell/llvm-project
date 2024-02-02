@@ -2256,6 +2256,9 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
                  dyn_cast_if_present<CXXDefaultArgExpr>(DefaultExpr)) {
     Loc = DAE->getUsedLocation();
     Context = DAE->getUsedContext();
+  } else if (const auto *CE = dyn_cast_if_present<CallExpr>(DefaultExpr)) {
+    Loc = CE->getBeginLoc();
+    Context = getParentContext();
   } else {
     Loc = getLocation();
     Context = getParentContext();
