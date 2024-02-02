@@ -2037,6 +2037,12 @@ private:
   /// the function metadata.
   void EmitKernelMetadata(const FunctionDecl *FD, llvm::Function *Fn);
 
+  class CallsiteWrapperFunctionScope {
+  public:
+    bool InCallsiteWrapperFunction = false;
+    llvm::DenseMap<const Decl*, llvm::Constant *> StaticLocalDeclMap;
+  } CallsiteWrapper;
+
 public:
   CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext=false);
   ~CodeGenFunction();

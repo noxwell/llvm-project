@@ -1355,6 +1355,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     assert(FD == CGM.getCallsiteWrapperScope().GetWrapperDecl());
     const Expr* CallsiteExpr = CGM.getCallsiteWrapperScope().GetCallsiteExpr();
     assert(CallsiteExpr != nullptr);
+    CallsiteWrapper.InCallsiteWrapperFunction = true;
     CallsiteWrapperSourceLocGuard.emplace(CallsiteExpr, CurSourceLocExprScope);
   }
 

@@ -331,6 +331,59 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   return Addr;
 }
 
+llvm::Constant *CodeGenModule::getOrCreateFunctionLocalStaticVarDecl(
+    const VarDecl &D, const GlobalDecl &GD, StaticLocalDeclMapType &Cache) {
+  if (llvm::Constant *ExistingGV = Cache[&D])
+    return ExistingGV;
+
+  QualType Ty = D.getType();
+  assert(Ty->isConstantSizeType() && "VLAs can't be static");
+
+  assert(!D.isExternallyVisible() && "name shouldn't matter");
+  std::string Name = (getMangledName(GD) + "." + D.getNameAsString()).str();
+
+  llvm::Type *LTy = getTypes().ConvertTypeForMem(Ty);
+  LangAS AS = GetGlobalVarAddressSpace(&D);
+  unsigned TargetAS = getContext().getTargetAddressSpace(AS);
+
+  // OpenCL variables in local address space and CUDA shared
+  // variables cannot have an initializer.
+  llvm::Constant *Init = nullptr;
+  if (Ty.getAddressSpace() == LangAS::opencl_local ||
+      D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
+    Init = llvm::UndefValue::get(LTy);
+  else
+    Init = EmitNullConstant(Ty);
+
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      getModule(), LTy, Ty.isConstant(getContext()),
+      llvm::GlobalValue::InternalLinkage, Init, Name, nullptr,
+      llvm::GlobalVariable::NotThreadLocal, TargetAS);
+  GV->setAlignment(getContext().getDeclAlign(&D).getAsAlign());
+
+  if (supportsCOMDAT() && GV->isWeakForLinker())
+    GV->setComdat(TheModule.getOrInsertComdat(GV->getName()));
+
+  if (D.getTLSKind())
+    setTLSMode(GV, D);
+
+  setGVProperties(GV, &D);
+
+  // Make sure the result is of the correct type.
+  LangAS ExpectedAS = Ty.getAddressSpace();
+  llvm::Constant *Addr = GV;
+  if (AS != ExpectedAS) {
+    Addr = getTargetCodeGenInfo().performAddrSpaceCast(
+        *this, GV, AS, ExpectedAS,
+        llvm::PointerType::get(getLLVMContext(),
+                               getContext().getTargetAddressSpace(ExpectedAS)));
+  }
+
+  Cache[&D] = Addr;
+
+  return Addr;
+}
+
 /// AddInitializerToStaticVarDecl - Add the initializer for 'D' to the
 /// global variable that has already been created for it.  If the initializer
 /// has a different type than GV does, this may free GV and return a different
@@ -416,7 +469,14 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // Check to see if we already have a global variable for this
   // declaration.  This can happen when double-emitting function
   // bodies, e.g. with complete and base constructors.
-  llvm::Constant *addr = CGM.getOrCreateStaticVarDecl(D, Linkage);
+  llvm::Constant *addr;
+  if (CallsiteWrapper.InCallsiteWrapperFunction) {
+    assert(Linkage == llvm::GlobalValue::InternalLinkage);
+    addr = CGM.getOrCreateFunctionLocalStaticVarDecl(
+        D, CurGD, CallsiteWrapper.StaticLocalDeclMap);
+  } else {
+    addr = CGM.getOrCreateStaticVarDecl(D, Linkage);
+  }
   CharUnits alignment = getContext().getDeclAlign(&D);
 
   // Store into LocalDeclMap before generating initializer to handle

@@ -447,7 +447,8 @@ private:
   llvm::DenseMap<llvm::Constant *, llvm::GlobalVariable *> ConstantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, llvm::GlobalVariable *>
       UnnamedGlobalConstantDeclMap;
-  llvm::DenseMap<const Decl*, llvm::Constant *> StaticLocalDeclMap;
+  typedef llvm::DenseMap<const Decl *, llvm::Constant *> StaticLocalDeclMapType;
+  StaticLocalDeclMapType StaticLocalDeclMap;
   llvm::DenseMap<const Decl*, llvm::GlobalVariable*> StaticLocalDeclGuardMap;
   llvm::DenseMap<const Expr*, llvm::Constant *> MaterializedGlobalTemporaryMap;
 
@@ -692,6 +693,10 @@ public:
   llvm::Constant *
   getOrCreateStaticVarDecl(const VarDecl &D,
                            llvm::GlobalValue::LinkageTypes Linkage);
+
+  llvm::Constant *
+  getOrCreateFunctionLocalStaticVarDecl(const VarDecl &D, const GlobalDecl &GD,
+                                        StaticLocalDeclMapType &Cache);
 
   llvm::GlobalVariable *getStaticLocalDeclGuardAddress(const VarDecl *D) {
     return StaticLocalDeclGuardMap[D];
