@@ -11141,6 +11141,10 @@ static bool checkNonMultiVersionCompatAttributes(Sema &S,
       if (MVKind != MultiVersionKind::TargetClones)
         return Diagnose(S, A);
       break;
+    case attr::CallsiteWrapper:
+      if (MVKind != MultiVersionKind::CallsiteWrapper)
+        return Diagnose(S, A);
+      break;
     default:
       if (!AttrCompatibleWithMultiVersion(A->getKind(), MVKind))
         return Diagnose(S, A);
@@ -11642,6 +11646,12 @@ static bool CheckMultiVersionAdditionalDecl(
       }
       break;
     }
+    case clang::MultiVersionKind::CallsiteWrapper:
+      // FIXME: proper diag
+      S.Diag(NewFD->getLocation(), diag::err_multiversion_duplicate);
+      S.Diag(CurFD->getLocation(), diag::note_previous_declaration);
+      NewFD->setInvalidDecl();
+      return true;
     }
   }
 
@@ -11767,6 +11777,11 @@ static bool CheckMultiVersionFunction(Sema &S, FunctionDecl *NewFD,
       }
       OldFD->setIsMultiVersion();
       break;
+    case MultiVersionKind::CallsiteWrapper:
+      // FIXME: proper diagnostic
+      S.Diag(NewFD->getLocation(), diag::err_multiversion_after_used);
+      NewFD->setInvalidDecl();
+      return true;
 
     case MultiVersionKind::CPUDispatch:
     case MultiVersionKind::CPUSpecific:

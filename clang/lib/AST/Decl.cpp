@@ -3521,6 +3521,8 @@ MultiVersionKind FunctionDecl::getMultiVersionKind() const {
     return MultiVersionKind::CPUSpecific;
   if (hasAttr<TargetClonesAttr>())
     return MultiVersionKind::TargetClones;
+  if (hasAttr<CallsiteWrapperAttr>())
+    return MultiVersionKind::CallsiteWrapper;
   return MultiVersionKind::None;
 }
 

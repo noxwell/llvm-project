@@ -8919,6 +8919,14 @@ EnforceTCBLeafAttr *Sema::mergeEnforceTCBLeafAttr(
       *this, D, AL);
 }
 
+static void handleCallsiteWrapperAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *FD = dyn_cast<FunctionDecl>(D);
+  // FIXME: proper diagnostics
+  assert(FD);
+  FD->setIsMultiVersion(true);
+  handleSimpleAttribute<CallsiteWrapperAttr>(S, D, AL);
+}
+
 //===----------------------------------------------------------------------===//
 // Top Level Sema Entry Points
 //===----------------------------------------------------------------------===//
@@ -9850,7 +9858,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
 
   case ParsedAttr::AT_CallsiteWrapper:
-    handleSimpleAttribute<CallsiteWrapperAttr>(S, D, AL);
+    handleCallsiteWrapperAttr(S, D, AL);
     break;
   }
 }

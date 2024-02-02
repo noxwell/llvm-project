@@ -1877,6 +1877,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
         AppendTargetClonesMangling(CGM, FD->getAttr<TargetClonesAttr>(),
                                    GD.getMultiVersionIndex(), Out);
         break;
+      case MultiVersionKind::CallsiteWrapper:
+        Out << GD.getMultiVersionIndex();
+        break;
       case MultiVersionKind::None:
         llvm_unreachable("None multiversion type isn't valid here");
       }
@@ -4488,8 +4491,20 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 
     if (FD->isMultiVersion()) {
       UpdateMultiVersionNames(GD, FD, MangledName);
-      if (!IsForDefinition)
+      if (!IsForDefinition) {
+        if (FD->getMultiVersionKind() == MultiVersionKind::CallsiteWrapper) {
+          // FIXME: proper diagnostics
+          assert(isa<llvm::FunctionType>(Ty));
+
+          llvm::Function *F = llvm::Function::Create(
+              cast<llvm::FunctionType>(Ty), llvm::Function::InternalLinkage,
+              MangledName, &getModule());
+
+          EmitGlobalDefinition(GD, F);
+          return F;
+        }
         return GetOrCreateMultiVersionResolver(GD);
+      }
     }
   }
 
@@ -4554,11 +4569,6 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
   llvm::Function *F =
       llvm::Function::Create(FTy, llvm::Function::ExternalLinkage,
                              Entry ? StringRef() : MangledName, &getModule());
-
-  if (hasCallsiteWrapperContext()) {
-    // FIXME: hack
-    EmitGlobalDefinition(GD, F);
-  }
 
   // Store the declaration associated with this function so it is potentially
   // updated by further declarations or definitions and emitted at the end.

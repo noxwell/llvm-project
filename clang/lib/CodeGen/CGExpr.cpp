@@ -5402,15 +5402,15 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
         MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
-  std::optional<CallsiteWrapperScope::Guard> callsiteWrapperScopeGuard;
-  if (const auto *FD = dyn_cast<FunctionDecl>(E->getCalleeDecl())) {
-    if (FD->hasAttr<CallsiteWrapperAttr>()) {
-      // FIXME: getHashValue doesn't guarantee uniqueness!
-      callsiteWrapperScopeGuard.emplace(
-          std::to_string(E->getBeginLoc().getHashValue()),
-          CGM.getCurrentCallsiteWrapperScope());
-    }
-  }
+  // std::optional<CallsiteWrapperScope::Guard> callsiteWrapperScopeGuard;
+  // if (const auto *FD = dyn_cast<FunctionDecl>(E->getCalleeDecl())) {
+  //   if (FD->hasAttr<CallsiteWrapperAttr>()) {
+  //     // FIXME: getHashValue doesn't guarantee uniqueness!
+  //     callsiteWrapperScopeGuard.emplace(
+  //         std::to_string(E->getBeginLoc().getHashValue()),
+  //         CGM.getCurrentCallsiteWrapperScope());
+  //   }
+  // }
 
   CGCallee callee = EmitCallee(E->getCallee());
 
@@ -5508,6 +5508,11 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
+      if (FD->hasAttr<CallsiteWrapperAttr>()) {
+        // FIXME: getHashValue doesn't guarantee uniqueness!
+        return EmitDirectCallee(
+            *this, GlobalDecl(FD, E->getBeginLoc().getHashValue()));
+      }
       return EmitDirectCallee(*this, FD);
     }
   } else if (auto ME = dyn_cast<MemberExpr>(E)) {

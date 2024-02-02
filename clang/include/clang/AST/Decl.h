@@ -1941,7 +1941,8 @@ enum class MultiVersionKind {
   CPUSpecific,
   CPUDispatch,
   TargetClones,
-  TargetVersion
+  TargetVersion,
+  CallsiteWrapper
 };
 
 /// Represents a function declaration or definition.
