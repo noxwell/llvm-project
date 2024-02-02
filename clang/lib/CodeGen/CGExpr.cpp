@@ -5402,15 +5402,12 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
         MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
-  // std::optional<CallsiteWrapperScope::Guard> callsiteWrapperScopeGuard;
-  // if (const auto *FD = dyn_cast<FunctionDecl>(E->getCalleeDecl())) {
-  //   if (FD->hasAttr<CallsiteWrapperAttr>()) {
-  //     // FIXME: getHashValue doesn't guarantee uniqueness!
-  //     callsiteWrapperScopeGuard.emplace(
-  //         std::to_string(E->getBeginLoc().getHashValue()),
-  //         CGM.getCurrentCallsiteWrapperScope());
-  //   }
-  // }
+  std::optional<CallsiteWrapperScope::Guard> callsiteWrapperScopeGuard;
+  if (const auto *FD = dyn_cast<FunctionDecl>(E->getCalleeDecl())) {
+    if (FD->hasAttr<CallsiteWrapperAttr>()) {
+      callsiteWrapperScopeGuard.emplace(FD, E, CGM.getCallsiteWrapperScope());
+    }
+  }
 
   CGCallee callee = EmitCallee(E->getCallee());
 
@@ -5509,9 +5506,9 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
       if (FD->hasAttr<CallsiteWrapperAttr>()) {
-        // FIXME: getHashValue doesn't guarantee uniqueness!
+        // FIXME: getRawEncoding doesn't guarantee uniqueness!
         return EmitDirectCallee(
-            *this, GlobalDecl(FD, E->getBeginLoc().getHashValue()));
+            *this, GlobalDecl(FD, E->getBeginLoc().getRawEncoding()));
       }
       return EmitDirectCallee(*this, FD);
     }

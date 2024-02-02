@@ -1585,8 +1585,7 @@ public:
                      bool IsDtorAttrFunc = false);
 
   bool hasCallsiteWrapperContext();
-  CallsiteWrapperScope& getCurrentCallsiteWrapperScope();
-  StringRef getCallsiteWrapperPrefix();
+  CallsiteWrapperScope& getCallsiteWrapperScope();
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(

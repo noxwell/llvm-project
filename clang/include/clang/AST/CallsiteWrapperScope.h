@@ -13,34 +13,37 @@
 #ifndef LLVM_CLANG_AST_CALLSITEWRAPPERSCOPE_H
 #define LLVM_CLANG_AST_CALLSITEWRAPPERSCOPE_H
 
-#include "llvm/ADT/StringRef.h"
-
-#include <string>
-
 namespace clang {
 
+class Decl;
+class Expr;
+
 class CallsiteWrapperScope {
-  std::string NamePrefix;
+  const Decl *WrapperDecl = nullptr;
+  const Expr *CallsiteExpr = nullptr;
 
 public:
-  bool Empty() { return NamePrefix.empty(); }
+  bool Empty() { return WrapperDecl == nullptr; }
 
-  llvm::StringRef GetNamePrefix() { return NamePrefix; }
+  const Decl *GetWrapperDecl() { return WrapperDecl; }
+  const Expr *GetCallsiteExpr() { return CallsiteExpr; }
 
   explicit CallsiteWrapperScope() = default;
 
   class Guard;
 
 private:
-  explicit CallsiteWrapperScope(std::string NamePrefix)
-      : NamePrefix(std::move(NamePrefix)) {}
+  explicit CallsiteWrapperScope(const Decl *WrapperDecl,
+                                const Expr *CallsiteExpr)
+      : WrapperDecl(WrapperDecl), CallsiteExpr(CallsiteExpr) {}
 };
 
 class CallsiteWrapperScope::Guard {
 public:
-  Guard(std::string NamePrefix, CallsiteWrapperScope &Current)
+  Guard(const Decl *WrapperDecl, const Expr *CallsiteExpr,
+        CallsiteWrapperScope &Current)
       : Current(Current), OldVal(Current) {
-    Current = CallsiteWrapperScope(std::move(NamePrefix));
+    Current = CallsiteWrapperScope(WrapperDecl, CallsiteExpr);
   }
 
   ~Guard() { Current = OldVal; }

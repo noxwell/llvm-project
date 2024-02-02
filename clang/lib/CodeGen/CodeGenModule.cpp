@@ -1840,10 +1840,6 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     }
   }
 
-  if (CGM.hasCallsiteWrapperContext()) {
-    Out << CGM.getCallsiteWrapperPrefix();
-  }
-
   // Check if the module name hash should be appended for internal linkage
   // symbols.   This should come before multi-version target suffixes are
   // appended. This is to keep the name and module hash suffix of the
@@ -1957,13 +1953,7 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
   // static device variable depends on whether the variable is referenced by
   // a host or device host function. Therefore the mangled name cannot be
   // cached.
-  bool CanBeCached =
-      !LangOpts.CUDAIsDevice || !getContext().mayExternalize(GD.getDecl());
-
-  if (hasCallsiteWrapperContext())
-    CanBeCached = false;
-
-  if (CanBeCached) {
+  if (!LangOpts.CUDAIsDevice || !getContext().mayExternalize(GD.getDecl())) {
     auto FoundName = MangledDeclNames.find(CanonicalGD);
     if (FoundName != MangledDeclNames.end())
       return FoundName->second;
@@ -7663,10 +7653,6 @@ bool CodeGenModule::hasCallsiteWrapperContext() {
   return !CurrentCallsiteWrapperScope.Empty();
 }
 
-CallsiteWrapperScope& CodeGenModule::getCurrentCallsiteWrapperScope() {
+CallsiteWrapperScope& CodeGenModule::getCallsiteWrapperScope() {
   return CurrentCallsiteWrapperScope;
-}
-
-StringRef CodeGenModule::getCallsiteWrapperPrefix() {
-  return CurrentCallsiteWrapperScope.GetNamePrefix();
 }

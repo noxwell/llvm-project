@@ -246,9 +246,8 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // them. It is possible to reference them before emitting the function that
   // contains them, and it is possible to emit the containing function multiple
   // times.
-  if (!hasCallsiteWrapperContext())
-    if (llvm::Constant *ExistingGV = StaticLocalDeclMap[&D])
-      return ExistingGV;
+  if (llvm::Constant *ExistingGV = StaticLocalDeclMap[&D])
+    return ExistingGV;
 
   QualType Ty = D.getType();
   assert(Ty->isConstantSizeType() && "VLAs can't be static");
@@ -296,8 +295,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
                                getContext().getTargetAddressSpace(ExpectedAS)));
   }
 
-  if (!hasCallsiteWrapperContext())
-    setStaticLocalDeclAddress(&D, Addr);
+  setStaticLocalDeclAddress(&D, Addr);
 
   // Ensure that the static local gets initialized by making sure the parent
   // function gets emitted eventually.

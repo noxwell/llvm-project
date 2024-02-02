@@ -1350,6 +1350,14 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   CurGD = GD;
 
+  std::optional<SourceLocExprScopeGuard> CallsiteWrapperSourceLocGuard;
+  if (FD->getMultiVersionKind() == MultiVersionKind::CallsiteWrapper) {
+    assert(FD == CGM.getCallsiteWrapperScope().GetWrapperDecl());
+    const Expr* CallsiteExpr = CGM.getCallsiteWrapperScope().GetCallsiteExpr();
+    assert(CallsiteExpr != nullptr);
+    CallsiteWrapperSourceLocGuard.emplace(CallsiteExpr, CurSourceLocExprScope);
+  }
+
   FunctionArgList Args;
   QualType ResTy = BuildFunctionArgList(GD, Args);
 
